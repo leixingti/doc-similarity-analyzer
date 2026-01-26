@@ -36,7 +36,8 @@ export default function ResultDetail() {
   }
 
   if (!user) {
-    window.location.href = getLoginUrl();
+    window.location.href = 
+"/login";
     return null;
   }
 

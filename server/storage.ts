@@ -1,7 +1,12 @@
-// Preconfigured storage helpers for Manus WebDev templates
-// Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
+// 存储模块 - 支持 Manus 存储服务和本地存储
 
 import { ENV } from './_core/env';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// 如果配置了 Manus 存储凭证，使用 Manus 存储；否则使用本地存储
+const USE_LOCAL_STORAGE = !ENV.forgeApiUrl || !ENV.forgeApiKey;
+const STORAGE_DIR = path.join(process.cwd(), '.storage');
 
 type StorageConfig = { baseUrl: string; apiKey: string };
 
@@ -10,9 +15,8 @@ function getStorageConfig(): StorageConfig {
   const apiKey = ENV.forgeApiKey;
 
   if (!baseUrl || !apiKey) {
-    throw new Error(
-      "Storage proxy credentials missing: set BUILT_IN_FORGE_API_URL and BUILT_IN_FORGE_API_KEY"
-    );
+    console.log('Using local file storage (Manus credentials not configured)');
+    return { baseUrl: '', apiKey: '' };
   }
 
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };
@@ -72,6 +76,30 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
+  if (USE_LOCAL_STORAGE) {
+    // 使用本地存储
+    if (!fs.existsSync(STORAGE_DIR)) {
+      fs.mkdirSync(STORAGE_DIR, { recursive: true });
+    }
+    
+    const key = normalizeKey(relKey);
+    const filePath = path.join(STORAGE_DIR, key);
+    const dir = path.dirname(filePath);
+    
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    
+    if (typeof data === 'string') {
+      fs.writeFileSync(filePath, data);
+    } else {
+      fs.writeFileSync(filePath, Buffer.from(data));
+    }
+    
+    return { key, url: `/storage/${key}` };
+  }
+  
+  // 使用 Manus 存储
   const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
   const uploadUrl = buildUploadUrl(baseUrl, key);
@@ -93,8 +121,13 @@ export async function storagePut(
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {
-  const { baseUrl, apiKey } = getStorageConfig();
   const key = normalizeKey(relKey);
+  
+  if (USE_LOCAL_STORAGE) {
+    return { key, url: `/storage/${key}` };
+  }
+  
+  const { baseUrl, apiKey } = getStorageConfig();
   return {
     key,
     url: await buildDownloadUrl(baseUrl, key, apiKey),

@@ -22,9 +22,10 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
   const [exporting, setExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -77,57 +78,85 @@ export default function Dashboard() {
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files || []);
+    const validFiles: File[] = [];
+    
+    for (const file of files) {
       // 验证文件大小
       if (file.size > 10 * 1024 * 1024) {
-        toast.error("文件大小不能超过10MB");
-        return;
+        toast.error(`文件 ${file.name} 大小超过10MB，已跳过`);
+        continue;
       }
-      setSelectedFile(file);
+      validFiles.push(file);
+    }
+    
+    if (validFiles.length > 0) {
+      setSelectedFiles(validFiles);
     }
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (selectedFiles.length === 0) return;
 
     setUploading(true);
-    setUploadProgress(0);
-    try {
-      const reader = new FileReader();
-      reader.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const progress = Math.round((e.loaded / e.total) * 90); // 0-90%用于读取文件
-          setUploadProgress(progress);
-        }
-      };
-      reader.onload = async (e) => {
-        setUploadProgress(95); // 文件读取完成，开始上传
-        const buffer = e.target?.result as ArrayBuffer;
-        const base64 = btoa(
-          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
+    setCurrentUploadIndex(0);
+    
+    const uploadNextFile = async (index: number) => {
+      if (index >= selectedFiles.length) {
+        // 所有文件上传完成
+        setUploading(false);
+        setUploadDialogOpen(false);
+        setSelectedFiles([]);
+        setUploadProgress(0);
+        toast.success(`成功上传 ${selectedFiles.length} 个文件！`);
+        refetchDocuments();
+        return;
+      }
 
-        const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-           uploadMutation.mutate(
-          {
-            filename: selectedFile.name,
-            fileType: selectedFile.name.split('.').pop() || '',
-            fileSize: selectedFile.size,
-            fileBuffer: base64,
-          },
-          {
-            onSuccess: () => {
-              setUploadProgress(100);
+      const file = selectedFiles[index];
+      setCurrentUploadIndex(index);
+      setUploadProgress(Math.round((index / selectedFiles.length) * 100));
+
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const buffer = e.target?.result as ArrayBuffer;
+          const base64 = btoa(
+            new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+
+          uploadMutation.mutate(
+            {
+              filename: file.name,
+              fileType: file.name.split('.').pop() || '',
+              fileSize: file.size,
+              fileBuffer: base64,
             },
-          }
-        );  setUploading(false);
-      };
-      reader.readAsArrayBuffer(selectedFile);
-    } catch (error) {
-      setUploading(false);
-      toast.error("文件读取失败");
-    }
+            {
+              onSuccess: () => {
+                // 继续上传下一个文件
+                uploadNextFile(index + 1);
+              },
+              onError: (error) => {
+                toast.error(`上传 ${file.name} 失败: ${error.message}`);
+                // 继续上传下一个文件
+                uploadNextFile(index + 1);
+              },
+            }
+          );
+        };
+        reader.onerror = () => {
+          toast.error(`读取 ${file.name} 失败`);
+          uploadNextFile(index + 1);
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        toast.error(`处理 ${file.name} 失败`);
+        uploadNextFile(index + 1);
+      }
+    };
+
+    uploadNextFile(0);
   };
 
   const [taskName, setTaskName] = useState("");
@@ -214,7 +243,8 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    window.location.href = getLoginUrl();
+    window.location.href = 
+'/login';
     return null;
   }
 
@@ -285,33 +315,45 @@ export default function Dashboard() {
                   <Input
                     id="file"
                     type="file"
+                    multiple
                     accept=".docx,.doc,.pdf,.txt,.pptx,.ppt,.xlsx,.xls,.md,.markdown,.html,.htm"
                     onChange={handleFileSelect}
                     disabled={uploading}
                   />
-                  {selectedFile && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      已选择: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
-                    </p>
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-medium">已选择 {selectedFiles.length} 个文件：</p>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {selectedFiles.map((file, idx) => (
+                          <div key={idx} className="text-sm text-muted-foreground flex justify-between">
+                            <span>{file.name}</span>
+                            <span>({(file.size / 1024).toFixed(2)} KB)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                   {uploading && (
                     <div className="mt-4 space-y-2">
                       <Progress value={uploadProgress} />
                       <p className="text-sm text-muted-foreground text-center">
-                        上传进度: {uploadProgress}%
+                        上传进度: {currentUploadIndex + 1}/{selectedFiles.length} ({uploadProgress}%)
                       </p>
                     </div>
                   )}
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
-                  取消
-                </Button>
-                <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
-                  {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  {uploading ? "上传中..." : "上传"}
-                </Button>
+                <Button variant="outline" onClick={() => {
+                setUploadDialogOpen(false);
+                setSelectedFiles([]);
+              }} disabled={uploading}>
+                取消
+              </Button>
+              <Button onClick={handleUpload} disabled={selectedFiles.length === 0 || uploading}>
+                {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {uploading ? `上传中 (${currentUploadIndex + 1}/${selectedFiles.length})...` : `上传 (${selectedFiles.length} 个文件)`}
+              </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

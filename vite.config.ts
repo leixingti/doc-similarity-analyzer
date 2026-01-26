@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
+// import { visualizer } from "rollup-plugin-visualizer"; // 已禁用
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -150,7 +151,15 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+  // 添加打包分析插件（已禁用）
+  // visualizer({ open: true, gzipSize: true, brotliSize: true }),
+];
 
 export default defineConfig({
   plugins,
@@ -167,6 +176,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // 优化打包
+    sourcemap: true,
+    minify: "terser",
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router-dom"],
+          trpc: ["@trpc/client", "@trpc/react-query", "@tanstack/react-query"],
+          ui: ["@radix-ui/react-accordion", "@radix-ui/react-alert-dialog"],
+        },
+      },
+    },
   },
   server: {
     host: true,
@@ -183,5 +204,13 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    // 启用 HMR
+    hmr: {
+      overlay: true,
+    },
+  },
+  // 优化依赖预构建
+  optimizeDeps: {
+    include: ["react", "react-dom", "@trpc/client", "@trpc/react-query"],
   },
 });

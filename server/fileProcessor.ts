@@ -47,22 +47,47 @@ export async function processDocx(buffer: Buffer): Promise<ProcessedFile> {
  */
 export async function processPdf(buffer: Buffer): Promise<ProcessedFile> {
   try {
-    // @ts-ignore
-    const pdfParse = (await import('pdf-parse')).default;
-    const data = await pdfParse(buffer);
-    const text = data.text;
+    console.log('[FileProcessor] Starting PDF processing, buffer size:', buffer.length);
+    // Import pdf-parse v2 with correct API
+    const module = await import('pdf-parse');
+    const { PDFParse } = module;
+    console.log('[FileProcessor] pdf-parse module loaded successfully');
+    
+    // Convert Buffer to Uint8Array for pdf-parse
+    const uint8Array = new Uint8Array(buffer);
+    
+    // Create parser instance with data parameter
+    const parser = new PDFParse({ data: uint8Array });
+    const result = await parser.getText();
+    
+    console.log('[FileProcessor] PDF parsed successfully, text length:', result.text.length);
+    const text = result.text;
+    
+    // Get page count using getInfo if available
+    let pageCount = 1;
+    try {
+      const info = await parser.getInfo();
+      pageCount = info.numpages || 1;
+    } catch (e) {
+      console.warn('[FileProcessor] Could not retrieve page count, defaulting to 1');
+    }
     
     return {
       text,
       metadata: {
-        pages: data.numpages,
+        pages: pageCount,
         words: text.split(/\s+/).filter((w: string) => w.length > 0).length,
         characters: text.length,
       }
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FileProcessor] PDF processing error:', error);
-    throw new Error('Failed to process PDF file');
+    console.error('[FileProcessor] Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
+    throw new Error(`Failed to process PDF file: ${error?.message || 'Unknown error'}`);
   }
 }
 

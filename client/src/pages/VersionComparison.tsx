@@ -140,7 +140,8 @@ export default function VersionComparison() {
   }
 
   if (!user) {
-    window.location.href = getLoginUrl();
+    window.location.href = 
+"/login";
     return null;
   }
 

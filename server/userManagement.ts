@@ -19,6 +19,55 @@ import { ENV } from "./_core/env";
  */
 export const userManagementRouter = router({
   /**
+   * 用户注册
+   */
+  register: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        password: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // 检查邮箱是否已存在
+      const existing = await getUserByEmail(input.email);
+      if (existing) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "该邮箱已被注册",
+        });
+      }
+      
+      const userId = await createUser({
+        email: input.email,
+        name: input.name,
+        password: input.password,
+      });
+      
+      // 注册成功后自动登录
+      const user = await getUserByEmail(input.email);
+      
+      // 生成JWT token
+      const token = jwt.sign(
+        { userId: user!.id, email: user!.email, role: user!.role },
+        ENV.cookieSecret,
+        { expiresIn: "7d" }
+      );
+      
+      return {
+        token,
+        user: {
+          id: user!.id,
+          email: user!.email,
+          name: user!.name,
+          role: user!.role,
+          mustChangePassword: user!.mustChangePassword,
+        },
+      };
+    }),
+
+  /**
    * 邮箱+密码登录
    */
   login: publicProcedure

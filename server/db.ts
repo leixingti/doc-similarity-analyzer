@@ -311,3 +311,25 @@ export async function getAnalysisStatistics(userId: number): Promise<{
     minSimilarity: Number(result[0]?.minSimilarity || 0),
   };
 }
+
+// 删除分析任务
+export async function deleteAnalysisTask(taskId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  // 删除相似片段
+  const results = await db.select().from(analysisResults)
+    .where(eq(analysisResults.taskId, taskId));
+  for (const result of results) {
+    await db.delete(similaritySegments)
+      .where(eq(similaritySegments.resultId, result.id));
+  }
+  
+  // 删除分析结果
+  await db.delete(analysisResults)
+    .where(eq(analysisResults.taskId, taskId));
+  
+  // 删除任务
+  await db.delete(analysisTasks)
+    .where(eq(analysisTasks.id, taskId));
+}

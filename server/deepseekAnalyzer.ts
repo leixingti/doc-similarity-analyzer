@@ -69,57 +69,13 @@ ${truncatedText2}
 
   try {
     const response = await invokeLLM({
+      model: "deepseek-chat",
       messages: [
         { role: "system", content: "你是一个专业的文档相似度分析专家，擅长从多个维度分析文档的相似性。" },
         { role: "user", content: prompt }
       ],
       response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "similarity_analysis",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              overallSimilarity: { type: "number", description: "整体相似度 0-100" },
-              semanticSimilarity: { type: "number", description: "语义相似度 0-100" },
-              structuralSimilarity: { type: "number", description: "结构相似度 0-100" },
-              styleSimilarity: { type: "number", description: "风格相似度 0-100" },
-              topicSimilarity: { type: "number", description: "主题相似度 0-100" },
-              toneSimilarity: { type: "number", description: "语气相似度 0-100" },
-              vocabularySimilarity: { type: "number", description: "词汇相似度 0-100" },
-              riskLevel: { type: "string", enum: ["high", "medium", "low"], description: "风险等级" },
-              riskDescription: { type: "string", description: "风险说明" },
-              summary: { type: "string", description: "分析摘要" },
-              recommendations: { 
-                type: "array", 
-                items: { type: "string" },
-                description: "改进建议"
-              },
-              segments: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    doc1Segment: { type: "string" },
-                    doc2Segment: { type: "string" },
-                    similarity: { type: "number" },
-                    reason: { type: "string" }
-                  },
-                  required: ["doc1Segment", "doc2Segment", "similarity", "reason"],
-                  additionalProperties: false
-                },
-                description: "相似片段"
-              }
-            },
-            required: [
-              "overallSimilarity", "semanticSimilarity", "structuralSimilarity",
-              "styleSimilarity", "topicSimilarity", "toneSimilarity", "vocabularySimilarity",
-              "riskLevel", "riskDescription", "summary", "recommendations", "segments"
-            ],
-            additionalProperties: false
-          }
-        }
+        type: "json_object"
       }
     });
 

@@ -67,7 +67,9 @@ export const analysisTasks = mysqlTable("analysisTasks", {
   analysisMode: mysqlEnum("analysisMode", ["traditional", "deepseek"]).notNull(),
   status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
   progress: float("progress").default(0), // 0-100
-  similarity: float("similarity"), // 整体相似度 0-100
+  overallSimilarity: float("overallSimilarity"), // 整体相似度 0-100
+  similarity: float("similarity"), // 整体相似度 0-100 (备用)
+  errorMessage: text("errorMessage"), // 错误信息
   summary: text("summary"), // AI生成的分析摘要
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
@@ -81,11 +83,14 @@ export type InsertAnalysisTask = typeof analysisTasks.$inferInsert;
  */
 export const analysisResults = mysqlTable("analysisResults", {
   id: int("id").autoincrement().primaryKey(),
-  taskId: int("taskId").notNull(),
-  documentId1: int("documentId1").notNull(),
-  documentId2: int("documentId2").notNull(),
-  similarity: float("similarity").notNull(), // 相似度 0-100
+  taskId: int("taskId").notNull().unique(),
+  overallSimilarity: float("overallSimilarity").notNull(), // 整体相似度 0-100
+  summary: text("summary"), // 分析摘要
   details: json("details"), // 详细对比数据
+  pairwiseResults: json("pairwiseResults"), // 文档对的对比结果
+  riskLevel: mysqlEnum("riskLevel", ["high", "medium", "low"]), // 风险等级
+  riskDescription: text("riskDescription"), // 风险描述
+  recommendations: json("recommendations"), // 建议
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -98,10 +103,13 @@ export type InsertAnalysisResult = typeof analysisResults.$inferInsert;
 export const similaritySegments = mysqlTable("similaritySegments", {
   id: int("id").autoincrement().primaryKey(),
   resultId: int("resultId").notNull(),
+  doc1Id: int("doc1Id").notNull(), // 文档1的ID
+  doc2Id: int("doc2Id").notNull(), // 文档2的ID
   doc1Segment: text("doc1Segment").notNull(), // 文档1的片段
   doc2Segment: text("doc2Segment").notNull(), // 文档2的片段
   similarity: float("similarity").notNull(), // 片段相似度 0-100
   reason: text("reason"), // AI分析的相似原因
+  position: json("position"), // 片段位置信息
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

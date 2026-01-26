@@ -198,6 +198,18 @@ export const appRouter = router({
         return tasks;
       }),
 
+    // 删除任务
+    delete: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getAnalysisTaskById(input.taskId);
+        if (!task || task.userId !== ctx.user.id) {
+          throw new Error('任务不存在或无权限');
+        }
+        await db.deleteAnalysisTask(input.taskId);
+        return { success: true };
+      }),
+
     // 获取历史记录
     getHistory: protectedProcedure
       .input(z.object({
@@ -268,6 +280,8 @@ async function performAnalysis(
   mode: 'traditional' | 'deepseek'
 ) {
   try {
+    console.log(`[Analysis] Starting analysis for task ${taskId} with mode ${mode}`);
+    
     // 目前只支持两个文档对比
     if (documents.length !== 2) {
       throw new Error('目前只支持两个文档的对比');
@@ -275,6 +289,8 @@ async function performAnalysis(
 
     const text1 = documents[0].extractedText || '';
     const text2 = documents[1].extractedText || '';
+
+    console.log(`[Analysis] Text lengths: ${text1.length}, ${text2.length}`);
 
     if (!text1 || !text2) {
       throw new Error('文档文本提取失败');
@@ -284,7 +300,9 @@ async function performAnalysis(
 
     if (mode === 'traditional') {
       // 传统算法分析
+      console.log(`[Analysis] Running traditional analysis...`);
       const result = await analyzeTraditional(text1, text2);
+      console.log(`[Analysis] Traditional analysis result: ${result.overallSimilarity}%`);
       
       analysisResult = {
         similarity: result.overallSimilarity,
@@ -298,7 +316,9 @@ async function performAnalysis(
       };
     } else {
       // DeepSeek AI分析
+      console.log(`[Analysis] Running DeepSeek analysis...`);
       const result = await analyzeWithDeepSeek(text1, text2);
+      console.log(`[Analysis] DeepSeek analysis result: ${result.overallSimilarity}%`);
       
       analysisResult = {
         similarity: result.overallSimilarity,
@@ -312,16 +332,18 @@ async function performAnalysis(
     }
 
     // 保存分析结果
+    console.log(`[Analysis] Saving analysis result...`);
     const resultId = await db.createAnalysisResult({
       taskId,
-      similarity: analysisResult.similarity,
+      overallSimilarity: analysisResult.similarity,
+      summary: analysisResult.summary,
       details: analysisResult.details as any,
-      documentId1: documents[0].id,
-      documentId2: documents[1].id,
     });
+    console.log(`[Analysis] Result saved with ID: ${resultId}`);
 
     // 保存相似片段
     if (analysisResult.segments && analysisResult.segments.length > 0) {
+      console.log(`[Analysis] Saving ${analysisResult.segments.length} similarity segments...`);
       const segmentsToInsert = analysisResult.segments.map((seg: any) => ({
         resultId,
         doc1Id: documents[0].id,
@@ -334,21 +356,31 @@ async function performAnalysis(
       }));
       
       await db.createSimilaritySegments(segmentsToInsert);
+      console.log(`[Analysis] Segments saved successfully`);
     }
 
     // 更新任务状态
+    console.log(`[Analysis] Updating task status to completed...`);
     await db.updateAnalysisTask(taskId, {
       status: 'completed',
       similarity: analysisResult.similarity,
+      summary: analysisResult.summary,
       completedAt: new Date(),
     });
+    console.log(`[Analysis] Task ${taskId} completed successfully`);
 
   } catch (error: any) {
     console.error(`[Analysis] Task ${taskId} failed:`, error);
-    await db.updateAnalysisTask(taskId, {
-      status: 'failed',
-      summary: `Error: ${error.message}`,
-    });
-    throw error;
+    const errorMessage = error.message || error.toString();
+    console.error(`[Analysis] Error message: ${errorMessage}`);
+    try {
+      await db.updateAnalysisTask(taskId, {
+        status: 'failed',
+        errorMessage: errorMessage,
+        summary: `Error: ${errorMessage}`,
+      });
+    } catch (dbError) {
+      console.error(`[Analysis] Failed to update task status:`, dbError);
+    }
   }
 }

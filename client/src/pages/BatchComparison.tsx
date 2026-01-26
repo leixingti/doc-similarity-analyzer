@@ -29,7 +29,7 @@ export default function BatchComparison() {
   }
 
   if (!user) {
-    window.location.href = getLoginUrl();
+    window.location.href = '/login';
     return null;
   }
 

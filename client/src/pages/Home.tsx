@@ -1,9 +1,9 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getLoginUrl } from "@/const";
 import { FileText, Zap, Shield, TrendingUp, ArrowRight } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -31,7 +31,7 @@ export default function Home() {
             <span className="text-xl font-bold">文档相似度分析系统</span>
           </div>
           <Button asChild>
-            <a href={getLoginUrl()}>登录</a>
+            <Link href="/login">登录</Link>
           </Button>
         </div>
       </header>
@@ -47,9 +47,9 @@ export default function Home() {
           </p>
           <div className="flex gap-4 justify-center pt-4">
             <Button size="lg" asChild>
-              <a href={getLoginUrl()}>
+              <Link href="/login">
                 开始使用 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <a href="#features">了解更多</a>
@@ -117,7 +117,7 @@ export default function Home() {
               注册登录，免费使用文档相似度分析服务
             </p>
             <Button size="lg" variant="secondary" asChild>
-              <a href={getLoginUrl()}>免费注册</a>
+              <Link href="/login">免费注册</Link>
             </Button>
           </CardContent>
         </Card>
