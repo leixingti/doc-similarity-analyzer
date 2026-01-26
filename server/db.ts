@@ -139,12 +139,7 @@ export async function getUserDocuments(userId: number): Promise<Document[]> {
   return await db.select().from(documents).where(eq(documents.userId, userId)).orderBy(desc(documents.createdAt));
 }
 
-export async function deleteDocument(id: number): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-
-  await db.delete(documents).where(eq(documents.id, id));
-}
+// deleteDocument函数已移动到文件末尾，包含完整的关联删除逻辑
 
 // ==================== 分析任务相关 ====================
 
@@ -214,12 +209,48 @@ export async function getSimilaritySegmentsByResultId(resultId: number): Promise
 
 // ==================== 用户偏好相关 ====================
 
-export async function getUserPreferences(userId: number): Promise<UserPreference | null> {
+export async function getUserPreferences(userId: number) {
   const db = await getDb();
   if (!db) return null;
+  const results = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return results[0] || null;
+}
 
-  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
-  return result.length > 0 ? result[0] : null;
+export async function deleteDocument(documentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  
+  // 验证文档所有权
+  const doc = await db.select().from(documents).where(eq(documents.id, documentId)).limit(1);
+  if (!doc[0] || doc[0].userId !== userId) {
+    throw new Error('Document not found or access denied');
+  }
+  
+  // 删除关联的分析任务和结果
+  const tasks = await db.select().from(analysisTasks)
+    .where(eq(analysisTasks.userId, userId));
+  
+  for (const task of tasks) {
+    const docIds = task.documentIds as number[];
+    if (docIds.includes(documentId)) {
+      // 删除相似片段
+      const results = await db.select().from(analysisResults)
+        .where(eq(analysisResults.taskId, task.id));
+      for (const result of results) {
+        await db.delete(similaritySegments)
+          .where(eq(similaritySegments.resultId, result.id));
+      }
+      // 删除分析结果
+      await db.delete(analysisResults)
+        .where(eq(analysisResults.taskId, task.id));
+      // 删除任务
+      await db.delete(analysisTasks)
+        .where(eq(analysisTasks.id, task.id));
+    }
+  }
+  
+  // 删除文档
+  await db.delete(documents).where(eq(documents.id, documentId));
 }
 
 export async function createUserPreferences(prefs: InsertUserPreference): Promise<void> {

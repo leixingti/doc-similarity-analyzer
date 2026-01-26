@@ -26,6 +26,13 @@ export const appRouter = router({
 
   // 文档管理
   documents: router({
+    // 删除文档
+    delete: protectedProcedure
+      .input(z.object({ documentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteDocument(input.documentId, ctx.user.id);
+        return { success: true };
+      }),
     // 上传文档
     upload: protectedProcedure
       .input(z.object({
@@ -81,18 +88,7 @@ export const appRouter = router({
       return documents;
     }),
 
-    // 删除文档
-    delete: protectedProcedure
-      .input(z.object({ documentId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        const doc = await db.getDocumentById(input.documentId);
-        if (!doc || doc.userId !== ctx.user.id) {
-          throw new Error('文档不存在或无权限');
-        }
 
-        await db.deleteDocument(input.documentId);
-        return { success: true };
-      }),
   }),
 
   // 分析任务

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -22,8 +23,11 @@ export default function Dashboard() {
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
 
   const { data: documents, refetch: refetchDocuments } = trpc.documents.list.useQuery(undefined, {
     enabled: !!user,
@@ -31,6 +35,19 @@ export default function Dashboard() {
 
   const { data: tasks, refetch: refetchTasks } = trpc.analysis.listTasks.useQuery(undefined, {
     enabled: !!user,
+  });
+
+  const deleteDocumentMutation = trpc.documents.delete.useMutation({
+    onSuccess: () => {
+      toast.success("文档删除成功！");
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+      refetchDocuments();
+      refetchTasks();
+    },
+    onError: (error) => {
+      toast.error(`删除失败: ${error.message}`);
+    },
   });
 
   const uploadMutation = trpc.documents.upload.useMutation({
@@ -72,24 +89,36 @@ export default function Dashboard() {
     if (!selectedFile) return;
 
     setUploading(true);
+    setUploadProgress(0);
     try {
       const reader = new FileReader();
+      reader.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const progress = Math.round((e.loaded / e.total) * 90); // 0-90%用于读取文件
+          setUploadProgress(progress);
+        }
+      };
       reader.onload = async (e) => {
+        setUploadProgress(95); // 文件读取完成，开始上传
         const buffer = e.target?.result as ArrayBuffer;
         const base64 = btoa(
           new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
         );
 
         const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || '';
-        
-        await uploadMutation.mutateAsync({
-          filename: selectedFile.name,
-          fileType: fileExt,
-          fileSize: selectedFile.size,
-          fileBuffer: base64,
-        });
-        
-        setUploading(false);
+           uploadMutation.mutate(
+          {
+            filename: selectedFile.name,
+            fileType: selectedFile.name.split('.').pop() || '',
+            fileSize: selectedFile.size,
+            fileBuffer: base64,
+          },
+          {
+            onSuccess: () => {
+              setUploadProgress(100);
+            },
+          }
+        );  setUploading(false);
       };
       reader.readAsArrayBuffer(selectedFile);
     } catch (error) {
@@ -262,6 +291,14 @@ export default function Dashboard() {
                       已选择: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
                     </p>
                   )}
+                  {uploading && (
+                    <div className="mt-4 space-y-2">
+                      <Progress value={uploadProgress} />
+                      <p className="text-sm text-muted-foreground text-center">
+                        上传进度: {uploadProgress}%
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
@@ -374,6 +411,16 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDocumentToDelete(doc.id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -465,6 +512,37 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 删除确认对话框 */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认删除</DialogTitle>
+            <DialogDescription>
+              删除文档后，所有使用该文档的分析任务和结果也将被删除。此操作不可恢复，确定要继续吗？
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (documentToDelete) {
+                  deleteDocumentMutation.mutate({ documentId: documentToDelete });
+                }
+              }}
+              disabled={deleteDocumentMutation.isPending}
+            >
+              {deleteDocumentMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {deleteDocumentMutation.isPending ? "删除中..." : "确认删除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
