@@ -1,0 +1,11 @@
+Build trigger file - Updated: 2026-01-26 14:25:00 UTC
+
+This file is used to force Railway to rebuild the application.
+It has no functional purpose but helps trigger a fresh build.
+
+If you see this file, it means the latest fixes have been applied:
+1. ✅ Dockerfile uses pnpm instead of npm
+2. ✅ COPY commands use explicit filenames (no wildcards)
+3. ✅ .dockerignore includes pnpm-lock.yaml and yarn.lock
+
+The application should now build successfully!
