@@ -290,7 +290,8 @@ async function performAnalysis(
     const text1 = documents[0].extractedText || '';
     const text2 = documents[1].extractedText || '';
 
-    console.log(`[Analysis] Text lengths: ${text1.length}, ${text2.length}`);
+    console.log(`[Analysis] Document 1 text: ${text1.length} chars`);
+    console.log(`[Analysis] Document 2 text: ${text2.length} chars`);
 
     if (!text1 || !text2) {
       throw new Error('文档文本提取失败');
@@ -299,10 +300,9 @@ async function performAnalysis(
     let analysisResult: any;
 
     if (mode === 'traditional') {
-      // 传统算法分析
       console.log(`[Analysis] Running traditional analysis...`);
       const result = await analyzeTraditional(text1, text2);
-      console.log(`[Analysis] Traditional analysis result: ${result.overallSimilarity}%`);
+      console.log(`[Analysis] Traditional analysis completed: ${result.overallSimilarity}%`);
       
       analysisResult = {
         similarity: result.overallSimilarity,
@@ -370,9 +370,9 @@ async function performAnalysis(
     console.log(`[Analysis] Task ${taskId} completed successfully`);
 
   } catch (error: any) {
-    console.error(`[Analysis] Task ${taskId} failed:`, error);
+    console.error(`[Analysis] Task ${taskId} failed`);
     const errorMessage = error.message || error.toString();
-    console.error(`[Analysis] Error message: ${errorMessage}`);
+    console.error(`[Analysis] Error: ${errorMessage}`);
     try {
       await db.updateAnalysisTask(taskId, {
         status: 'failed',
@@ -380,7 +380,7 @@ async function performAnalysis(
         summary: `Error: ${errorMessage}`,
       });
     } catch (dbError) {
-      console.error(`[Analysis] Failed to update task status:`, dbError);
+      console.error(`[Analysis] Failed to update task status`);
     }
   }
 }
