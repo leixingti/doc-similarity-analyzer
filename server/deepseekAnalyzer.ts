@@ -68,6 +68,7 @@ ${truncatedText2}
 请确保返回的是有效的JSON格式。`;
 
   try {
+    console.log('[DeepSeekAnalyzer] Invoking LLM with deepseek-chat model...');
     const response = await invokeLLM({
       model: "deepseek-chat",
       messages: [
@@ -81,30 +82,37 @@ ${truncatedText2}
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
+      console.error('[DeepSeekAnalyzer] Empty response content');
       throw new Error('DeepSeek API returned empty response');
     }
+    console.log('[DeepSeekAnalyzer] Response content received, parsing...');
 
     const contentStr = typeof content === 'string' ? content : JSON.stringify(content);
+    console.log('[DeepSeekAnalyzer] Content string length:', contentStr.length);
     const result = JSON.parse(contentStr);
+    console.log('[DeepSeekAnalyzer] Parsed result:', { similarity: result.overallSimilarity });
 
     return {
-      overallSimilarity: result.overallSimilarity,
-      summary: result.summary,
+      overallSimilarity: result.overallSimilarity || 0,
+      summary: result.summary || '',
       details: {
-        semanticSimilarity: result.semanticSimilarity,
-        structuralSimilarity: result.structuralSimilarity,
-        styleSimilarity: result.styleSimilarity,
-        topicSimilarity: result.topicSimilarity,
-        toneSimilarity: result.toneSimilarity,
-        vocabularySimilarity: result.vocabularySimilarity,
+        semanticSimilarity: result.semanticSimilarity || 0,
+        structuralSimilarity: result.structuralSimilarity || 0,
+        styleSimilarity: result.styleSimilarity || 0,
+        topicSimilarity: result.topicSimilarity || 0,
+        toneSimilarity: result.toneSimilarity || 0,
+        vocabularySimilarity: result.vocabularySimilarity || 0,
       },
-      riskLevel: result.riskLevel,
-      riskDescription: result.riskDescription,
-      recommendations: result.recommendations,
-      segments: result.segments
+      riskLevel: result.riskLevel || 'medium',
+      riskDescription: result.riskDescription || '',
+      recommendations: result.recommendations || [],
+      segments: result.segments || []
     };
   } catch (error) {
     console.error('[DeepSeekAnalyzer] Analysis error:', error);
-    throw new Error('Failed to analyze with DeepSeek AI');
+    if (error instanceof Error) {
+      console.error('[DeepSeekAnalyzer] Error message:', error.message);
+    }
+    throw new Error(`Failed to analyze with DeepSeek AI: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
