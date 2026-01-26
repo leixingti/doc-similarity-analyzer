@@ -211,11 +211,13 @@ const normalizeToolChoice = (
 };
 
 const resolveApiUrl = () => {
-  // 优先使用 forge.manus.im，这是 Manus 平台的标准 LLM API 端点
-  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0 && ENV.forgeApiUrl !== 'https://api.manus.im') {
+  // 使用 OpenAI 兼容的 API
+  // 优先使用本地 OpenAI API（通过 Manus 平台）
+  if (ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0) {
     return `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`;
   }
-  return "https://forge.manus.im/v1/chat/completions";
+  // 备用：使用 OpenAI 官方 API
+  return "https://api.openai.com/v1/chat/completions";
 };
 
 const assertApiKey = () => {
@@ -301,9 +303,13 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768
-  payload.thinking = {
-    "budget_tokens": 128
+  payload.max_tokens = 4096;
+  
+  // 仅为支持的模型添加 thinking 参数
+  if (model && model.includes('deepseek')) {
+    payload.thinking = {
+      "budget_tokens": 128
+    };
   }
 
   const normalizedResponseFormat = normalizeResponseFormat({
@@ -319,6 +325,8 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const apiUrl = resolveApiUrl();
   console.log('[LLM] Calling API:', apiUrl);
+  console.log('[LLM] Model:', payload.model);
+  
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
@@ -330,9 +338,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('[LLM] Error response:', response.status, errorText);
+    console.error('[LLM] Error response:', response.status);
+    console.error('[LLM] Error text:', errorText);
     throw new Error(
-      `LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`
+      `LLM invoke failed: ${response.status} ${response.statusText}`
     );
   }
 

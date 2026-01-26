@@ -70,7 +70,7 @@ ${truncatedText2}
   try {
     console.log('[DeepSeekAnalyzer] Invoking LLM with deepseek-chat model...');
     const response = await invokeLLM({
-      model: "deepseek-chat",
+      model: 'gpt-4.1-mini',  // 使用 Manus 平台支持的模型
       messages: [
         { role: "system", content: "你是一个专业的文档相似度分析专家，擅长从多个维度分析文档的相似性。" },
         { role: "user", content: prompt }
