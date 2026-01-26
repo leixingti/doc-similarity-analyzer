@@ -4,16 +4,116 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { FileText, ArrowLeft, AlertCircle, CheckCircle2, MinusCircle, PlusCircle } from "lucide-react";
+import { FileText, ArrowLeft, AlertCircle, CheckCircle2, MinusCircle, PlusCircle, Download } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import jsPDF from "jspdf";
+import { toast } from "sonner";
 
 export default function VersionComparison() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [document1Id, setDocument1Id] = useState<number | null>(null);
   const [document2Id, setDocument2Id] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  // 导出PDF报告
+  const exportToPDF = async () => {
+    if (!comparisonResult || !documents) return;
+
+    setExporting(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let yPos = 20;
+
+      // 标题
+      doc.setFontSize(20);
+      doc.text("文档版本对比报告", pageWidth / 2, yPos, { align: "center" });
+      yPos += 15;
+
+      // 对比文档信息
+      doc.setFontSize(12);
+      const doc1 = documents.find((d) => d.id === document1Id);
+      const doc2 = documents.find((d) => d.id === document2Id);
+      doc.text(`Version 1: ${doc1?.filename || "Unknown"}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Version 2: ${doc2?.filename || "Unknown"}`, 20, yPos);
+      yPos += 15;
+
+      // 变化统计
+      doc.setFontSize(16);
+      doc.text("变化统计", 20, yPos);
+      yPos += 10;
+
+      doc.setFontSize(12);
+      doc.text(`Total Lines: ${comparisonResult.statistics.totalLines}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Added Lines: ${comparisonResult.statistics.addedLines}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Deleted Lines: ${comparisonResult.statistics.deletedLines}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Modified Lines: ${comparisonResult.statistics.modifiedLines}`, 20, yPos);
+      yPos += 8;
+      doc.text(`Unchanged Lines: ${comparisonResult.statistics.unchangedLines}`, 20, yPos);
+      yPos += 15;
+
+      // 总体评估
+      doc.setFontSize(16);
+      doc.text("总体评估", 20, yPos);
+      yPos += 10;
+
+      doc.setFontSize(12);
+      doc.text(`Modification Rate: ${comparisonResult.statistics.modificationRate.toFixed(2)}%`, 20, yPos);
+      yPos += 8;
+      doc.text(`Change Level: ${getChangeLevelText(comparisonResult.changeLevel)}`, 20, yPos);
+      yPos += 15;
+
+      // 详细变化（只显示前20个）
+      doc.setFontSize(16);
+      doc.text("详细变化 (Top 20)", 20, yPos);
+      yPos += 10;
+
+      doc.setFontSize(10);
+      const maxChanges = Math.min(20, comparisonResult.changes.length);
+      for (let i = 0; i < maxChanges; i++) {
+        const change = comparisonResult.changes[i];
+        if (yPos > 270) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        const typeText = change.type === "added" ? "[+]" : change.type === "deleted" ? "[-]" : "[~]";
+        doc.text(`${typeText} Line ${change.lineNumber}`, 20, yPos);
+        yPos += 6;
+
+        if (change.oldContent) {
+          const oldLines = doc.splitTextToSize(`- ${change.oldContent}`, pageWidth - 40);
+          doc.text(oldLines, 25, yPos);
+          yPos += oldLines.length * 5;
+        }
+
+        if (change.newContent) {
+          const newLines = doc.splitTextToSize(`+ ${change.newContent}`, pageWidth - 40);
+          doc.text(newLines, 25, yPos);
+          yPos += newLines.length * 5;
+        }
+
+        yPos += 3;
+      }
+
+      // 保存PDF
+      const fileName = `version-comparison-${doc1?.filename || "doc1"}-vs-${doc2?.filename || "doc2"}.pdf`;
+      doc.save(fileName);
+      toast.success("导出成功！");
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("导出失败，请重试");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // 获取用户的所有文档
   const { data: documents } = trpc.documents.list.useQuery(undefined, {
@@ -156,6 +256,13 @@ export default function VersionComparison() {
 
         {comparisonResult && (
           <div className="space-y-6">
+            {/* 导出按钮 */}
+            <div className="flex justify-end">
+              <Button onClick={exportToPDF} disabled={exporting}>
+                <Download className="mr-2 h-4 w-4" />
+                {exporting ? "导出中..." : "导出PDF报告"}
+              </Button>
+            </div>
             {/* 变化统计 */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <Card>

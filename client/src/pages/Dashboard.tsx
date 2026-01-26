@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { toast } from "sonner";
+import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
 
 export default function Dashboard() {
   const { user, loading: authLoading, logout } = useAuth();
@@ -28,6 +29,8 @@ export default function Dashboard() {
   const [exporting, setExporting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<number | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [documentToPreview, setDocumentToPreview] = useState<any>(null);
 
   const { data: documents, refetch: refetchDocuments } = trpc.documents.list.useQuery(undefined, {
     enabled: !!user,
@@ -416,16 +419,28 @@ export default function Dashboard() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDocumentToDelete(doc.id);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <XCircle className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDocumentToPreview(doc);
+                          setPreviewDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setDocumentToDelete(doc.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <XCircle className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -548,6 +563,13 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 文档预览对话框 */}
+      <DocumentPreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        document={documentToPreview}
+      />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { getLoginUrl } from "@/const";
 import { ArrowLeft, FileText, Loader2, TrendingUp, BarChart3, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 
 export default function History() {
   const [, setLocation] = useLocation();
@@ -46,7 +46,56 @@ export default function History() {
   }
 
   // 准备趋势图数据
-  const trendData: any[] = [];
+  const prepareTrendData = () => {
+    if (!history || history.length === 0) return [];
+
+    // 按月份统计
+    const monthlyData: { [key: string]: { total: number; sum: number; count: number } } = {};
+
+    history.forEach((task: any) => {
+      const date = new Date(task.createdAt);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { total: 0, sum: 0, count: 0 };
+      }
+
+      monthlyData[monthKey].total++;
+      monthlyData[monthKey].sum += task.overallSimilarity || 0;
+      monthlyData[monthKey].count++;
+    });
+
+    return Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({
+        month,
+        count: data.total,
+        avgSimilarity: data.count > 0 ? (data.sum / data.count).toFixed(1) : 0,
+      }));
+  };
+
+  // 按文档类型统计
+  const prepareDocTypeData = () => {
+    if (!history || history.length === 0) return [];
+
+    const typeCount: { [key: string]: number } = {};
+
+    history.forEach((task: any) => {
+      // 这里假设我们有文档类型信息，如果没有可以使用analysisMode
+      const type = task.analysisMode || 'unknown';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+    });
+
+    return Object.entries(typeCount).map(([name, value]) => ({
+      name: name === 'traditional' ? '传统算法' : name === 'deepseek' ? 'DeepSeek AI' : name,
+      value,
+    }));
+  };
+
+  const trendData = prepareTrendData();
+  const docTypeData = prepareDocTypeData();
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
   return (
     <div className="min-h-screen bg-background">
@@ -168,6 +217,83 @@ export default function History() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+        )}
+
+        {/* 分析类型分布和统计图表 */}
+        {history && history.length > 0 && (
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            {/* 分析模式分布饼图 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>分析模式分布</CardTitle>
+                <CardDescription>传统算法 vs DeepSeek AI</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={docTypeData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={(entry) => `${entry.name}: ${entry.value}`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {docTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* 相似度分布柱状图 */}
+            <Card>
+              <CardHeader>
+                <CardTitle>相似度分布</CardTitle>
+                <CardDescription>不同相似度区间的任务数量</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart
+                    data={[
+                      {
+                        range: '0-20%',
+                        count: history.filter((t: any) => t.overallSimilarity < 20).length,
+                      },
+                      {
+                        range: '20-40%',
+                        count: history.filter((t: any) => t.overallSimilarity >= 20 && t.overallSimilarity < 40).length,
+                      },
+                      {
+                        range: '40-60%',
+                        count: history.filter((t: any) => t.overallSimilarity >= 40 && t.overallSimilarity < 60).length,
+                      },
+                      {
+                        range: '60-80%',
+                        count: history.filter((t: any) => t.overallSimilarity >= 60 && t.overallSimilarity < 80).length,
+                      },
+                      {
+                        range: '80-100%',
+                        count: history.filter((t: any) => t.overallSimilarity >= 80).length,
+                      },
+                    ]}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="range" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8b5cf6" name="任务数量" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Filters */}
