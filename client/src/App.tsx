@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import ResultDetail from "./pages/ResultDetail";
 import History from "./pages/History";
 import VersionComparison from "./pages/VersionComparison";
+import BatchComparison from "./pages/BatchComparison";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/results/:taskId" component={ResultDetail} />
       <Route path="/history" component={History} />
       <Route path="/version-comparison" component={VersionComparison} />
+      <Route path="/batch-comparison" component={BatchComparison} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

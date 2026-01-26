@@ -3,20 +3,24 @@ import { Button } from "@/components/ui/button";
 import { useState } from 'react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
+import * as XLSX from 'xlsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { ArrowLeft, FileText, Loader2, Download, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Download, AlertCircle, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 import { useParams, useLocation } from "wouter";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { DiffHighlight } from '@/components/DiffHighlight';
 
 export default function ResultDetail() {
   const { taskId } = useParams();
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
   const [exporting, setExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   const { data: task, isLoading } = trpc.analysis.getTask.useQuery(
     { taskId: parseInt(taskId || "0") },
@@ -139,6 +143,111 @@ export default function ResultDetail() {
     }
   };
 
+  const handleExportWord = async () => {
+    setExporting(true);
+    try {
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: [
+            new Paragraph({
+              text: '文档相似度分析报告',
+              heading: 'Heading1',
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `任务名称: ${task?.taskName || ''}`, break: 1 }),
+                new TextRun({ text: `创建时间: ${task?.createdAt ? new Date(task.createdAt).toLocaleString() : ''}`, break: 1 }),
+                new TextRun({ text: `分析模式: ${task?.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'}`, break: 1 }),
+              ],
+            }),
+            new Paragraph({ text: '' }),
+            new Paragraph({
+              text: `整体相似度: ${similarity.toFixed(1)}%`,
+              heading: 'Heading2',
+            }),
+            new Paragraph({ text: result?.summary || '暂无分析摘要' }),
+            new Paragraph({ text: '' }),
+            new Paragraph({
+              text: '相似片段',
+              heading: 'Heading2',
+            }),
+            ...segments.map((seg: any, idx: number) => 
+              new Paragraph({
+                children: [
+                  new TextRun({ text: `片段 #${idx + 1} (${seg.similarity.toFixed(1)}% 相似)`, bold: true, break: 1 }),
+                  new TextRun({ text: `文档A: ${seg.doc1Segment || seg.text1 || ''}`, break: 1 }),
+                  new TextRun({ text: `文档B: ${seg.doc2Segment || seg.text2 || ''}`, break: 1 }),
+                  new TextRun({ text: `分析原因: ${seg.reason || ''}`, break: 1 }),
+                ],
+              })
+            ),
+          ],
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${task?.taskName || '分析报告'}_${Date.now()}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success('Word报告已导出！');
+    } catch (error: any) {
+      toast.error(`导出失败: ${error.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      const wb = XLSX.utils.book_new();
+
+      // 概览表
+      const overviewData = [
+        ['文档相似度分析报告'],
+        [''],
+        ['任务名称', task?.taskName || ''],
+        ['创建时间', task?.createdAt ? new Date(task.createdAt).toLocaleString() : ''],
+        ['分析模式', task?.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'],
+        ['整体相似度', `${similarity.toFixed(1)}%`],
+        [''],
+        ['分析摘要'],
+        [result?.summary || '暂无分析摘要'],
+      ];
+      const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
+      XLSX.utils.book_append_sheet(wb, ws1, '概览');
+
+      // 相似片段表
+      const segmentsData = [
+        ['片段编号', '相似度', '文档A', '文档B', '分析原因'],
+        ...segments.map((seg: any, idx: number) => [
+          `片段 #${idx + 1}`,
+          `${seg.similarity.toFixed(1)}%`,
+          seg.doc1Segment || seg.text1 || '',
+          seg.doc2Segment || seg.text2 || '',
+          seg.reason || '',
+        ]),
+      ];
+      const ws2 = XLSX.utils.aoa_to_sheet(segmentsData);
+      XLSX.utils.book_append_sheet(wb, ws2, '相似片段');
+
+      // 导出
+      XLSX.writeFile(wb, `${task?.taskName || '分析报告'}_${Date.now()}.xlsx`);
+
+      toast.success('Excel报告已导出！');
+    } catch (error: any) {
+      toast.error(`导出失败: ${error.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const getSimilarityLevel = (similarity: number) => {
     if (similarity >= 80) return { label: "高度相似", color: "text-red-500", bgColor: "bg-red-50 dark:bg-red-950", borderColor: "border-red-200 dark:border-red-800" };
     if (similarity >= 50) return { label: "中度相似", color: "text-orange-500", bgColor: "bg-orange-50 dark:bg-orange-950", borderColor: "border-orange-200 dark:border-orange-800" };
@@ -205,19 +314,55 @@ export default function ResultDetail() {
               </div>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleExportPDF}
-            disabled={exporting}
-          >
-            {exporting ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setExportMenuOpen(!exportMenuOpen)}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              {exporting ? '导出中...' : '导出报告'}
+              <ChevronDown className="h-4 w-4 ml-2" />
+            </Button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-card border rounded-lg shadow-lg z-50">
+                <div className="py-1">
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportPDF();
+                    }}
+                  >
+                    导出PDF格式
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportWord();
+                    }}
+                  >
+                    导出Word格式
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      setExportMenuOpen(false);
+                      handleExportExcel();
+                    }}
+                  >
+                    导出Excel格式
+                  </button>
+                </div>
+              </div>
             )}
-            {exporting ? '导出中...' : '导出报告'}
-          </Button>
+          </div>
         </div>
       </header>
 
@@ -380,20 +525,12 @@ export default function ResultDetail() {
                               {segment.similarity.toFixed(1)}% 相似
                             </span>
                           </div>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-2">文档 A</p>
-                              <div className="p-3 bg-background rounded border">
-                                <p className="text-sm whitespace-pre-wrap">{segment.doc1Segment || segment.text1 || '暂无内容'}</p>
-                              </div>
-                            </div>
-                            <div>
-                              <p className="text-xs font-medium text-muted-foreground mb-2">文档 B</p>
-                              <div className="p-3 bg-background rounded border">
-                                <p className="text-sm whitespace-pre-wrap">{segment.doc2Segment || segment.text2 || '暂无内容'}</p>
-                              </div>
-                            </div>
-                          </div>
+                          <DiffHighlight 
+                            text1={segment.doc1Segment || segment.text1 || '暂无内容'}
+                            text2={segment.doc2Segment || segment.text2 || '暂无内容'}
+                            label1="文档 A"
+                            label2="文档 B"
+                          />
                           {segment.reason && (
                             <div className="mt-3 pt-3 border-t">
                               <p className="text-xs text-muted-foreground">
