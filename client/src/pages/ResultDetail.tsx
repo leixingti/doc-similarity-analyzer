@@ -96,12 +96,12 @@ export default function ResultDetail() {
       yOffset += 15;
 
       // Analysis Summary
-      if (result?.summary) {
+      if (task?.summary) {
         pdf.setFontSize(14);
         pdf.text('Analysis Summary', 20, yOffset);
         yOffset += 8;
         pdf.setFontSize(10);
-        const lines = pdf.splitTextToSize(result.summary, pageWidth - 40);
+        const lines = pdf.splitTextToSize(task?.summary || '', pageWidth - 40);
         pdf.text(lines, 20, yOffset);
         yOffset += lines.length * 5 + 10;
       }
@@ -167,7 +167,7 @@ export default function ResultDetail() {
               text: `整体相似度: ${similarity.toFixed(1)}%`,
               heading: 'Heading2',
             }),
-            new Paragraph({ text: result?.summary || '暂无分析摘要' }),
+            new Paragraph({ text: task?.summary || '暂无分析摘要' }),
             new Paragraph({ text: '' }),
             new Paragraph({
               text: '相似片段',
@@ -218,7 +218,7 @@ export default function ResultDetail() {
         ['整体相似度', `${similarity.toFixed(1)}%`],
         [''],
         ['分析摘要'],
-        [result?.summary || '暂无分析摘要'],
+        [task?.summary || '暂无分析摘要'],
       ];
       const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
       XLSX.utils.book_append_sheet(wb, ws1, '概览');
@@ -267,7 +267,7 @@ export default function ResultDetail() {
     }
   };
 
-  const similarity = task.overallSimilarity || 0;
+  const similarity = task.similarity || 0;
   const level = getSimilarityLevel(similarity);
 
   // 准备雷达图数据
@@ -449,9 +449,9 @@ export default function ResultDetail() {
                 <CardDescription>AI生成的详细分析报告</CardDescription>
               </CardHeader>
               <CardContent>
-                {result?.summary ? (
+                {task?.summary ? (
                   <div className="prose prose-sm max-w-none">
-                    <p className="text-foreground">{result.summary}</p>
+                    <p className="text-foreground">{task.summary}</p>
                   </div>
                 ) : (
                   <p className="text-muted-foreground">暂无分析摘要</p>

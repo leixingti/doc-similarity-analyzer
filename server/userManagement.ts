@@ -91,6 +91,7 @@ export const userManagementRouter = router({
       name: users.name,
       role: users.role,
       emailVerified: users.emailVerified,
+      loginMethod: users.loginMethod,
       createdAt: users.createdAt,
       lastSignedIn: users.lastSignedIn,
     }).from(users);

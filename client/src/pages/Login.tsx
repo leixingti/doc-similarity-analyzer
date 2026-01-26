@@ -22,7 +22,7 @@ export default function Login() {
       localStorage.setItem('auth_token', data.token);
       
       // 如果需要修改密码，跳转到密码修改页面
-      if (data.mustChangePassword) {
+      if (data.user?.mustChangePassword) {
         setLocation('/change-password?required=true');
       } else {
         setLocation('/dashboard');

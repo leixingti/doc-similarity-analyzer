@@ -127,7 +127,7 @@ export const appRouter = router({
           console.error(`[Analysis] Task ${taskId} failed:`, err);
           db.updateAnalysisTask(taskId, {
             status: 'failed',
-            errorMessage: err.message,
+            summary: `Error: ${err.message}`,
           });
         });
 
@@ -347,7 +347,7 @@ async function performAnalysis(
     console.error(`[Analysis] Task ${taskId} failed:`, error);
     await db.updateAnalysisTask(taskId, {
       status: 'failed',
-      errorMessage: error.message,
+      summary: `Error: ${error.message}`,
     });
     throw error;
   }

@@ -43,7 +43,7 @@ export default function UserManagement() {
   const { data: users, isLoading } = trpc.userManagement.listUsers.useQuery();
 
   // 添加用户
-  const addUserMutation = trpc.userManagement.addUser.useMutation({
+  const addUserMutation = trpc.userManagement.createUser.useMutation({
     onSuccess: () => {
       setSuccess('用户添加成功');
       setIsAddDialogOpen(false);
@@ -71,14 +71,14 @@ export default function UserManagement() {
   });
 
   // 重置密码
-  const resetPasswordMutation = trpc.userManagement.resetPassword.useMutation({
+  const resetPasswordMutation = trpc.userManagement.resetUserPassword.useMutation({
     onSuccess: () => {
       setSuccess('密码重置成功，新密码为：123456');
       setIsResetDialogOpen(false);
       setSelectedUserId(null);
       setTimeout(() => setSuccess(''), 5000);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       setError(err.message || '重置密码失败');
     },
   });
@@ -111,7 +111,7 @@ export default function UserManagement() {
 
   const handleResetPassword = () => {
     if (selectedUserId) {
-      resetPasswordMutation.mutate({ userId: selectedUserId });
+      resetPasswordMutation.mutate({ userId: selectedUserId, newPassword: '123456' });
     }
   };
 

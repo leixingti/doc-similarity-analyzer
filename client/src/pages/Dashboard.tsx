@@ -169,7 +169,7 @@ export default function Dashboard() {
         pdf.text('Overall Similarity', 20, yOffset);
         yOffset += 10;
         pdf.setFontSize(32);
-        pdf.text(`${(task.overallSimilarity || 0).toFixed(1)}%`, 20, yOffset);
+        pdf.text(`${(task.similarity || 0).toFixed(1)}%`, 20, yOffset);
         yOffset += 15;
 
         const pdfBlob = pdf.output('blob');
@@ -517,7 +517,7 @@ export default function Dashboard() {
                         <p className="font-medium">{task.taskName}</p>
                         <p className="text-sm text-muted-foreground">
                           {getStatusText(task.status)} · {task.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'}
-                          {task.overallSimilarity !== null && ` · 相似度 ${task.overallSimilarity.toFixed(1)}%`}
+                          {task.similarity !== null && ` · 相似度 ${task.similarity.toFixed(1)}%`}
                         </p>
                       </div>
                     </div>
