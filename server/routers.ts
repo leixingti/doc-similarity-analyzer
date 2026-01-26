@@ -287,7 +287,7 @@ async function performAnalysis(
       const result = await analyzeTraditional(text1, text2);
       
       analysisResult = {
-        overallSimilarity: result.overallSimilarity,
+        similarity: result.overallSimilarity,
         summary: `基于传统算法的分析结果：整体相似度为 ${result.overallSimilarity.toFixed(1)}%。` +
                  `余弦相似度 ${result.details.cosineSimilarity.toFixed(1)}%，` +
                  `Jaccard相似度 ${result.details.jaccardSimilarity.toFixed(1)}%，` +
@@ -301,7 +301,7 @@ async function performAnalysis(
       const result = await analyzeWithDeepSeek(text1, text2);
       
       analysisResult = {
-        overallSimilarity: result.overallSimilarity,
+        similarity: result.overallSimilarity,
         summary: result.summary,
         details: result.details,
         riskLevel: result.riskLevel,
@@ -314,13 +314,10 @@ async function performAnalysis(
     // 保存分析结果
     const resultId = await db.createAnalysisResult({
       taskId,
-      overallSimilarity: analysisResult.overallSimilarity,
-      summary: analysisResult.summary,
+      similarity: analysisResult.similarity,
       details: analysisResult.details as any,
-      pairwiseResults: null,
-      riskLevel: analysisResult.riskLevel,
-      riskDescription: analysisResult.riskDescription,
-      recommendations: analysisResult.recommendations as any,
+      documentId1: documents[0].id,
+      documentId2: documents[1].id,
     });
 
     // 保存相似片段
@@ -342,7 +339,7 @@ async function performAnalysis(
     // 更新任务状态
     await db.updateAnalysisTask(taskId, {
       status: 'completed',
-      overallSimilarity: analysisResult.overallSimilarity,
+      similarity: analysisResult.similarity,
       completedAt: new Date(),
     });
 

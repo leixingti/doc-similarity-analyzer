@@ -270,10 +270,10 @@ export async function getAnalysisHistory(
     conditions.push(lte(analysisTasks.createdAt, filters.endDate));
   }
   if (filters?.minSimilarity !== undefined) {
-    conditions.push(gte(analysisTasks.overallSimilarity, filters.minSimilarity));
+    conditions.push(gte(analysisTasks.similarity, filters.minSimilarity));
   }
   if (filters?.maxSimilarity !== undefined) {
-    conditions.push(lte(analysisTasks.overallSimilarity, filters.maxSimilarity));
+    conditions.push(lte(analysisTasks.similarity, filters.maxSimilarity));
   }
 
   const result = await db.select().from(analysisTasks).where(and(...conditions)).orderBy(desc(analysisTasks.createdAt));
@@ -291,9 +291,9 @@ export async function getAnalysisStatistics(userId: number): Promise<{
 
   const result = await db.select({
     totalCount: sql<number>`COUNT(*)`,
-    avgSimilarity: sql<number>`AVG(${analysisTasks.overallSimilarity})`,
-    maxSimilarity: sql<number>`MAX(${analysisTasks.overallSimilarity})`,
-    minSimilarity: sql<number>`MIN(${analysisTasks.overallSimilarity})`,
+    avgSimilarity: sql<number>`AVG(${analysisTasks.similarity})`,
+    maxSimilarity: sql<number>`MAX(${analysisTasks.similarity})`,
+    minSimilarity: sql<number>`MIN(${analysisTasks.similarity})`,
   }).from(analysisTasks).where(
     and(
       eq(analysisTasks.userId, userId),

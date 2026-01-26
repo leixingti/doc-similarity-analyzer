@@ -89,3 +89,12 @@
 - 认证：Manus OAuth + JWT
 - 邮件：Gmail SMTP (nodemailer)
 - 密码加密：bcrypt
+
+
+### Bug修复 - analysisTasks表查询错误（✅ 已修复）
+
+- [x] 检查analysisTasks表的实际字段
+- [x] 对比schema定义与数据库实际结构
+- [x] 修复overallSimilarity字段名为similarity
+- [x] 修复所有相关查询语句
+- [ ] 测试Dashboard页面加载
