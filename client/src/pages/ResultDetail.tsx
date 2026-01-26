@@ -384,13 +384,13 @@ export default function ResultDetail() {
                             <div>
                               <p className="text-xs font-medium text-muted-foreground mb-2">文档 A</p>
                               <div className="p-3 bg-background rounded border">
-                                <p className="text-sm">{segment.text1}</p>
+                                <p className="text-sm whitespace-pre-wrap">{segment.doc1Segment || segment.text1 || '暂无内容'}</p>
                               </div>
                             </div>
                             <div>
                               <p className="text-xs font-medium text-muted-foreground mb-2">文档 B</p>
                               <div className="p-3 bg-background rounded border">
-                                <p className="text-sm">{segment.text2}</p>
+                                <p className="text-sm whitespace-pre-wrap">{segment.doc2Segment || segment.text2 || '暂无内容'}</p>
                               </div>
                             </div>
                           </div>
