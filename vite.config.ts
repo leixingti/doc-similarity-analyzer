@@ -182,7 +182,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          react: ["react", "react-dom", "react-router-dom"],
+          react: ["react", "react-dom"],
           trpc: ["@trpc/client", "@trpc/react-query", "@tanstack/react-query"],
           ui: ["@radix-ui/react-accordion", "@radix-ui/react-alert-dialog"],
         },
@@ -211,6 +211,6 @@ export default defineConfig({
   },
   // 优化依赖预构建
   optimizeDeps: {
-    include: ["react", "react-dom", "@trpc/client", "@trpc/react-query"],
+    include: ["react", "react-dom", "@trpc/client", "@trpc/react-query", "wouter"],
   },
 });
