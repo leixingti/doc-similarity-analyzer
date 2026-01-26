@@ -18,8 +18,6 @@ coverage
 .nyc_output
 .cache
 .turbo
-pnpm-lock.yaml
-yarn.lock
 .pnpm-store
 .idea
 .vscode
