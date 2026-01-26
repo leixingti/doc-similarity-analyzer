@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `analysisResults` \nDROP COLUMN `overallSimilarity`,\nDROP COLUMN `summary`,\nDROP COLUMN `pairwiseResults`,\nDROP COLUMN `riskLevel`,\nDROP COLUMN `riskDescription`,\nDROP COLUMN `recommendations`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3wFFFQg4AxL9qnu.root --database 5asJuGGsQsg6Gg2bVZknWV --execute ALTER TABLE `analysisResults` \nDROP COLUMN `overallSimilarity`,\nDROP COLUMN `summary`,\nDROP COLUMN `pairwiseResults`,\nDROP COLUMN `riskLevel`,\nDROP COLUMN `riskDescription`,\nDROP COLUMN `recommendations`;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 3500
+}

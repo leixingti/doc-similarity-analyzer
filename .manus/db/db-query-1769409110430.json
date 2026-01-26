@@ -1,0 +1,50 @@
+{
+  "query": "SELECT COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysisTasks' AND TABLE_SCHEMA = DATABASE();",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3wFFFQg4AxL9qnu.root --database 5asJuGGsQsg6Gg2bVZknWV --execute SELECT COLUMN_NAME, COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'analysisTasks' AND TABLE_SCHEMA = DATABASE();",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "int(11)"
+    },
+    {
+      "COLUMN_NAME": "userId",
+      "COLUMN_TYPE": "int(11)"
+    },
+    {
+      "COLUMN_NAME": "taskName",
+      "COLUMN_TYPE": "varchar(255)"
+    },
+    {
+      "COLUMN_NAME": "documentIds",
+      "COLUMN_TYPE": "json"
+    },
+    {
+      "COLUMN_NAME": "analysisMode",
+      "COLUMN_TYPE": "enum('traditional','deepseek')"
+    },
+    {
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "enum('pending','processing','completed','failed')"
+    },
+    {
+      "COLUMN_NAME": "overallSimilarity",
+      "COLUMN_TYPE": "float"
+    },
+    {
+      "COLUMN_NAME": "errorMessage",
+      "COLUMN_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "COLUMN_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "completedAt",
+      "COLUMN_TYPE": "timestamp"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tCOLUMN_TYPE\nid\tint(11)\nuserId\tint(11)\ntaskName\tvarchar(255)\ndocumentIds\tjson\nanalysisMode\tenum('traditional','deepseek')\nstatus\tenum('pending','processing','completed','failed')\noverallSimilarity\tfloat\nerrorMessage\ttext\ncreatedAt\ttimestamp\ncompletedAt\ttimestamp\n",
+  "stderr": "",
+  "execution_time_ms": 1567
+}

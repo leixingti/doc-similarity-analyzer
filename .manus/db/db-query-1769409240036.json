@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `analysisResults` \nADD COLUMN `documentId2` int NOT NULL AFTER `documentId1`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3wFFFQg4AxL9qnu.root --database 5asJuGGsQsg6Gg2bVZknWV --execute ALTER TABLE `analysisResults` \nADD COLUMN `documentId2` int NOT NULL AFTER `documentId1`;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2012
+}

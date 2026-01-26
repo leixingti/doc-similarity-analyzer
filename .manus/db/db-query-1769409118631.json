@@ -1,0 +1,22 @@
+{
+  "query": "SELECT * FROM analysisTasks LIMIT 1;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3wFFFQg4AxL9qnu.root --database 5asJuGGsQsg6Gg2bVZknWV --execute SELECT * FROM analysisTasks LIMIT 1;",
+  "rows": [
+    {
+      "id": "5",
+      "userId": "1",
+      "taskName": "对比1",
+      "documentIds": "[13, 12]",
+      "analysisMode": "traditional",
+      "status": "completed",
+      "overallSimilarity": "11.8",
+      "errorMessage": "NULL",
+      "createdAt": "2026-01-26 03:34:29",
+      "completedAt": "2026-01-26 03:34:30"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tuserId\ttaskName\tdocumentIds\tanalysisMode\tstatus\toverallSimilarity\terrorMessage\tcreatedAt\tcompletedAt\n5\t1\t对比1\t[13, 12]\ttraditional\tcompleted\t11.8\tNULL\t2026-01-26 03:34:29\t2026-01-26 03:34:30\n",
+  "stderr": "",
+  "execution_time_ms": 1562
+}

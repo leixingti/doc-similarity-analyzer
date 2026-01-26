@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE `analysisResults` \nADD COLUMN `documentId1` int NOT NULL AFTER `taskId`,\nADD COLUMN `documentId2` int NOT NULL AFTER `documentId1`,\nDROP COLUMN `overallSimilarity`,\nDROP COLUMN `summary`,\nDROP COLUMN `pairwiseResults`,\nDROP COLUMN `riskLevel`,\nDROP COLUMN `riskDescription`,\nDROP COLUMN `recommendations`;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway03.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3wFFFQg4AxL9qnu.root --database 5asJuGGsQsg6Gg2bVZknWV --execute ALTER TABLE `analysisResults` \nADD COLUMN `documentId1` int NOT NULL AFTER `taskId`,\nADD COLUMN `documentId2` int NOT NULL AFTER `documentId1`,\nDROP COLUMN `overallSimilarity`,\nDROP COLUMN `summary`,\nDROP COLUMN `pairwiseResults`,\nDROP COLUMN `riskLevel`,\nDROP COLUMN `riskDescription`,\nDROP COLUMN `recommendations`;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'documentid1' in 'analysisResults'"
+  ]
+}
