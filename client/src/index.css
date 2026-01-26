@@ -43,18 +43,18 @@
 }
 
 :root {
-  --primary: var(--color-blue-700);
-  --primary-foreground: var(--color-blue-50);
-  --sidebar-primary: var(--color-blue-600);
-  --sidebar-primary-foreground: var(--color-blue-50);
-  --chart-1: var(--color-blue-300);
-  --chart-2: var(--color-blue-500);
-  --chart-3: var(--color-blue-600);
-  --chart-4: var(--color-blue-700);
-  --chart-5: var(--color-blue-800);
-  --radius: 0.65rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.235 0.015 65);
+  --primary: oklch(55% 0.25 265); /* 深蓝紫色 */
+  --primary-foreground: oklch(100% 0 0);
+  --sidebar-primary: oklch(55% 0.25 265);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --chart-1: oklch(70% 0.20 260);
+  --chart-2: oklch(60% 0.22 265);
+  --chart-3: oklch(50% 0.24 270);
+  --chart-4: oklch(65% 0.20 280);
+  --chart-5: oklch(55% 0.22 285);
+  --radius: 0.5rem;
+  --background: oklch(98% 0.01 240);
+  --foreground: oklch(20% 0.02 240);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.235 0.015 65);
   --popover: oklch(1 0 0);

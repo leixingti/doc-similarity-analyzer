@@ -1,0 +1,355 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
+import { getLoginUrl } from "@/const";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+export default function Dashboard() {
+  const { user, loading: authLoading, logout } = useAuth();
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const { data: documents, refetch: refetchDocuments } = trpc.documents.list.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  const { data: tasks, refetch: refetchTasks } = trpc.analysis.listTasks.useQuery(undefined, {
+    enabled: !!user,
+  });
+
+  const uploadMutation = trpc.documents.upload.useMutation({
+    onSuccess: () => {
+      toast.success("文档上传成功！");
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      refetchDocuments();
+    },
+    onError: (error) => {
+      toast.error(`上传失败: ${error.message}`);
+    },
+  });
+
+  const createTaskMutation = trpc.analysis.create.useMutation({
+    onSuccess: () => {
+      toast.success("分析任务已创建！");
+      setCreateTaskDialogOpen(false);
+      refetchTasks();
+    },
+    onError: (error) => {
+      toast.error(`创建失败: ${error.message}`);
+    },
+  });
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // 验证文件大小
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("文件大小不能超过10MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const buffer = e.target?.result as ArrayBuffer;
+        const base64 = btoa(
+          new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+
+        const fileExt = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+        
+        await uploadMutation.mutateAsync({
+          filename: selectedFile.name,
+          fileType: fileExt,
+          fileSize: selectedFile.size,
+          fileBuffer: base64,
+        });
+        
+        setUploading(false);
+      };
+      reader.readAsArrayBuffer(selectedFile);
+    } catch (error) {
+      setUploading(false);
+      toast.error("文件读取失败");
+    }
+  };
+
+  const [taskName, setTaskName] = useState("");
+  const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
+  const [analysisMode, setAnalysisMode] = useState<"traditional" | "deepseek">("traditional");
+
+  const handleCreateTask = () => {
+    if (!taskName) {
+      toast.error("请输入任务名称");
+      return;
+    }
+    if (selectedDocs.length !== 2) {
+      toast.error("请选择2个文档进行对比");
+      return;
+    }
+
+    createTaskMutation.mutate({
+      taskName,
+      documentIds: selectedDocs,
+      analysisMode,
+    });
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    window.location.href = getLoginUrl();
+    return null;
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'failed':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'processing':
+        return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return '已完成';
+      case 'failed':
+        return '失败';
+      case 'processing':
+        return '处理中';
+      default:
+        return '等待中';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b bg-card">
+        <div className="container flex h-16 items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">文档相似度分析系统</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">欢迎, {user.name || user.email}</span>
+            <Button variant="outline" size="sm" onClick={() => logout()}>
+              登出
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <div className="container py-8">
+        {/* Actions */}
+        <div className="flex gap-4 mb-8">
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Upload className="mr-2 h-4 w-4" />
+                上传文档
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>上传文档</DialogTitle>
+                <DialogDescription>
+                  支持DOCX、PDF、TXT、PPTX、XLSX、Markdown、HTML格式，最大10MB
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="file">选择文件</Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    accept=".docx,.doc,.pdf,.txt,.pptx,.ppt,.xlsx,.xls,.md,.markdown,.html,.htm"
+                    onChange={handleFileSelect}
+                    disabled={uploading}
+                  />
+                  {selectedFile && (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      已选择: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                    </p>
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
+                  取消
+                </Button>
+                <Button onClick={handleUpload} disabled={!selectedFile || uploading}>
+                  {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {uploading ? "上传中..." : "上传"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="mr-2 h-4 w-4" />
+                创建分析任务
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>创建分析任务</DialogTitle>
+                <DialogDescription>
+                  选择两个文档进行相似度分析
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="taskName">任务名称</Label>
+                  <Input
+                    id="taskName"
+                    placeholder="例如：合同版本对比"
+                    value={taskName}
+                    onChange={(e) => setTaskName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>分析模式</Label>
+                  <Select value={analysisMode} onValueChange={(v) => setAnalysisMode(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="traditional">传统算法（快速）</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek AI（智能）</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>选择文档（选择2个）</Label>
+                  <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+                    {documents?.map((doc) => (
+                      <label key={doc.id} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          checked={selectedDocs.includes(doc.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              if (selectedDocs.length < 2) {
+                                setSelectedDocs([...selectedDocs, doc.id]);
+                              }
+                            } else {
+                              setSelectedDocs(selectedDocs.filter(id => id !== doc.id));
+                            }
+                          }}
+                        />
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{doc.filename}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateTaskDialogOpen(false)}>
+                  取消
+                </Button>
+                <Button onClick={handleCreateTask}>创建任务</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Documents */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>我的文档</CardTitle>
+            <CardDescription>已上传 {documents?.length || 0} 个文档</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!documents || documents.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">暂无文档，请先上传</p>
+            ) : (
+              <div className="space-y-2">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded">
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">{doc.filename}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {doc.fileType.toUpperCase()} · {(doc.fileSize / 1024).toFixed(2)} KB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Tasks */}
+        <Card>
+          <CardHeader>
+            <CardTitle>分析任务</CardTitle>
+            <CardDescription>共 {tasks?.length || 0} 个任务</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!tasks || tasks.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">暂无任务，请创建分析任务</p>
+            ) : (
+              <div className="space-y-2">
+                {tasks.map((task) => (
+                  <div key={task.id} className="flex items-center justify-between p-4 border rounded">
+                    <div className="flex items-center gap-4">
+                      {getStatusIcon(task.status)}
+                      <div>
+                        <p className="font-medium">{task.taskName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {getStatusText(task.status)} · {task.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'}
+                          {task.overallSimilarity !== null && ` · 相似度 ${task.overallSimilarity.toFixed(1)}%`}
+                        </p>
+                      </div>
+                    </div>
+                    {task.status === 'completed' && (
+                      <Button variant="outline" size="sm">
+                        查看报告
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

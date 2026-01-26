@@ -1,11 +1,17 @@
-import { eq } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { 
+  InsertUser, users,
+  documents, InsertDocument, Document,
+  analysisTasks, InsertAnalysisTask, AnalysisTask,
+  analysisResults, InsertAnalysisResult, AnalysisResult,
+  similaritySegments, InsertSimilaritySegment, SimilaritySegment,
+  userPreferences, InsertUserPreference, UserPreference
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
@@ -17,6 +23,8 @@ export async function getDb() {
   }
   return _db;
 }
+
+// ==================== 用户相关 ====================
 
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
@@ -85,8 +93,220 @@ export async function getUserByOpenId(openId: string) {
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ==================== 文档相关 ====================
+
+export async function createDocument(doc: InsertDocument): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(documents).values(doc);
+  return Number(result[0].insertId);
+}
+
+export async function getDocumentById(id: number): Promise<Document | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(documents).where(eq(documents.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getDocumentsByIds(ids: number[]): Promise<Document[]> {
+  const db = await getDb();
+  if (!db || ids.length === 0) return [];
+
+  const result = await db.select().from(documents).where(
+    sql`${documents.id} IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`
+  );
+  return result;
+}
+
+export async function getUserDocuments(userId: number): Promise<Document[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(documents).where(eq(documents.userId, userId)).orderBy(desc(documents.createdAt));
+}
+
+export async function deleteDocument(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.delete(documents).where(eq(documents.id, id));
+}
+
+// ==================== 分析任务相关 ====================
+
+export async function createAnalysisTask(task: InsertAnalysisTask): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(analysisTasks).values(task);
+  return Number(result[0].insertId);
+}
+
+export async function getAnalysisTaskById(id: number): Promise<AnalysisTask | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(analysisTasks).where(eq(analysisTasks.id, id)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getUserAnalysisTasks(userId: number): Promise<AnalysisTask[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(analysisTasks).where(eq(analysisTasks.userId, userId)).orderBy(desc(analysisTasks.createdAt));
+}
+
+export async function updateAnalysisTask(id: number, updates: Partial<AnalysisTask>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(analysisTasks).set(updates).where(eq(analysisTasks.id, id));
+}
+
+// ==================== 分析结果相关 ====================
+
+export async function createAnalysisResult(result: InsertAnalysisResult): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const insertResult = await db.insert(analysisResults).values(result);
+  return Number(insertResult[0].insertId);
+}
+
+export async function getAnalysisResultByTaskId(taskId: number): Promise<AnalysisResult | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(analysisResults).where(eq(analysisResults.taskId, taskId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// ==================== 相似片段相关 ====================
+
+export async function createSimilaritySegments(segments: InsertSimilaritySegment[]): Promise<void> {
+  const db = await getDb();
+  if (!db || segments.length === 0) return;
+
+  await db.insert(similaritySegments).values(segments);
+}
+
+export async function getSimilaritySegmentsByResultId(resultId: number): Promise<SimilaritySegment[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db.select().from(similaritySegments).where(eq(similaritySegments.resultId, resultId)).orderBy(desc(similaritySegments.similarity));
+}
+
+// ==================== 用户偏好相关 ====================
+
+export async function getUserPreferences(userId: number): Promise<UserPreference | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function createUserPreferences(prefs: InsertUserPreference): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.insert(userPreferences).values(prefs).onDuplicateKeyUpdate({
+    set: {
+      similarityThresholds: prefs.similarityThresholds,
+      defaultAnalysisMode: prefs.defaultAnalysisMode,
+      autoSaveResults: prefs.autoSaveResults,
+      emailNotifications: prefs.emailNotifications,
+      language: prefs.language,
+      theme: prefs.theme,
+      displayOptions: prefs.displayOptions,
+      updatedAt: new Date(),
+    }
+  });
+}
+
+export async function updateUserPreferences(userId: number, updates: Partial<InsertUserPreference>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  await db.update(userPreferences).set({ ...updates, updatedAt: new Date() }).where(eq(userPreferences.userId, userId));
+}
+
+// ==================== 历史记录和统计相关 ====================
+
+export async function getAnalysisHistory(
+  userId: number,
+  filters?: {
+    startDate?: Date;
+    endDate?: Date;
+    minSimilarity?: number;
+    maxSimilarity?: number;
+  }
+): Promise<AnalysisTask[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  let query = db.select().from(analysisTasks).where(eq(analysisTasks.userId, userId));
+
+  const conditions = [eq(analysisTasks.userId, userId)];
+
+  if (filters?.startDate) {
+    conditions.push(gte(analysisTasks.createdAt, filters.startDate));
+  }
+  if (filters?.endDate) {
+    conditions.push(lte(analysisTasks.createdAt, filters.endDate));
+  }
+  if (filters?.minSimilarity !== undefined) {
+    conditions.push(gte(analysisTasks.overallSimilarity, filters.minSimilarity));
+  }
+  if (filters?.maxSimilarity !== undefined) {
+    conditions.push(lte(analysisTasks.overallSimilarity, filters.maxSimilarity));
+  }
+
+  const result = await db.select().from(analysisTasks).where(and(...conditions)).orderBy(desc(analysisTasks.createdAt));
+  return result;
+}
+
+export async function getAnalysisStatistics(userId: number): Promise<{
+  totalCount: number;
+  avgSimilarity: number;
+  maxSimilarity: number;
+  minSimilarity: number;
+}> {
+  const db = await getDb();
+  if (!db) return { totalCount: 0, avgSimilarity: 0, maxSimilarity: 0, minSimilarity: 0 };
+
+  const result = await db.select({
+    totalCount: sql<number>`COUNT(*)`,
+    avgSimilarity: sql<number>`AVG(${analysisTasks.overallSimilarity})`,
+    maxSimilarity: sql<number>`MAX(${analysisTasks.overallSimilarity})`,
+    minSimilarity: sql<number>`MIN(${analysisTasks.overallSimilarity})`,
+  }).from(analysisTasks).where(
+    and(
+      eq(analysisTasks.userId, userId),
+      eq(analysisTasks.status, 'completed')
+    )
+  );
+
+  return {
+    totalCount: Number(result[0]?.totalCount || 0),
+    avgSimilarity: Number(result[0]?.avgSimilarity || 0),
+    maxSimilarity: Number(result[0]?.maxSimilarity || 0),
+    minSimilarity: Number(result[0]?.minSimilarity || 0),
+  };
+}
