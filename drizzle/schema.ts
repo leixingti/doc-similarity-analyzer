@@ -1,14 +1,17 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, float, json } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, float, json, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * 用户表 - 核心认证表
  */
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  openId: varchar("openId", { length: 64 }).unique(), // 允许为null，支持邮箱注册
   name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
+  email: varchar("email", { length: 320 }).unique(), // 邮箱必须唯一
+  password: varchar("password", { length: 255 }), // 密码哈希
+  emailVerified: boolean("emailVerified").default(false), // 邮箱是否已验证
+  mustChangePassword: boolean("mustChangePassword").default(false), // 是否必须修改密码
+  loginMethod: varchar("loginMethod", { length: 64 }), // oauth 或 email
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -17,6 +20,21 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * 邮箱验证码表 - 存储邮箱验证码
+ */
+export const emailVerifications = mysqlTable("emailVerifications", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  code: varchar("code", { length: 6 }).notNull(), // 6位验证码
+  expiresAt: timestamp("expiresAt").notNull(), // 过期时间
+  verified: boolean("verified").default(false), // 是否已验证
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type InsertEmailVerification = typeof emailVerifications.$inferInsert;
 
 /**
  * 文档表 - 存储上传的文档信息
@@ -48,8 +66,9 @@ export const analysisTasks = mysqlTable("analysisTasks", {
   documentIds: json("documentIds").notNull(), // [doc1Id, doc2Id, ...]
   analysisMode: mysqlEnum("analysisMode", ["traditional", "deepseek"]).notNull(),
   status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
-  overallSimilarity: float("overallSimilarity"), // 0-100
-  errorMessage: text("errorMessage"),
+  progress: float("progress").default(0), // 0-100
+  similarity: float("similarity"), // 整体相似度 0-100
+  summary: text("summary"), // AI生成的分析摘要
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   completedAt: timestamp("completedAt"),
 });
@@ -62,14 +81,11 @@ export type InsertAnalysisTask = typeof analysisTasks.$inferInsert;
  */
 export const analysisResults = mysqlTable("analysisResults", {
   id: int("id").autoincrement().primaryKey(),
-  taskId: int("taskId").notNull().unique(),
-  overallSimilarity: float("overallSimilarity").notNull(), // 0-100
-  summary: text("summary"), // AI生成的分析摘要
-  details: json("details"), // { semanticSimilarity, structuralSimilarity, styleSimilarity, ... }
-  pairwiseResults: json("pairwiseResults"), // 两两对比的详细结果
-  riskLevel: mysqlEnum("riskLevel", ["high", "medium", "low"]),
-  riskDescription: text("riskDescription"),
-  recommendations: json("recommendations"), // 改进建议数组
+  taskId: int("taskId").notNull(),
+  documentId1: int("documentId1").notNull(),
+  documentId2: int("documentId2").notNull(),
+  similarity: float("similarity").notNull(), // 相似度 0-100
+  details: json("details"), // 详细对比数据
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -82,35 +98,12 @@ export type InsertAnalysisResult = typeof analysisResults.$inferInsert;
 export const similaritySegments = mysqlTable("similaritySegments", {
   id: int("id").autoincrement().primaryKey(),
   resultId: int("resultId").notNull(),
-  doc1Id: int("doc1Id").notNull(),
-  doc2Id: int("doc2Id").notNull(),
   doc1Segment: text("doc1Segment").notNull(), // 文档1的片段
   doc2Segment: text("doc2Segment").notNull(), // 文档2的片段
-  similarity: float("similarity").notNull(), // 0-100
-  reason: text("reason"), // 相似原因说明
-  position: json("position"), // { doc1: { start, end }, doc2: { start, end } }
+  similarity: float("similarity").notNull(), // 片段相似度 0-100
+  reason: text("reason"), // AI分析的相似原因
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export type SimilaritySegment = typeof similaritySegments.$inferSelect;
 export type InsertSimilaritySegment = typeof similaritySegments.$inferInsert;
-
-/**
- * 用户偏好设置表 - 存储用户的个性化设置
- */
-export const userPreferences = mysqlTable("userPreferences", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().unique(),
-  similarityThresholds: json("similarityThresholds").notNull(), // { high: 80, medium: 50, low: 20 }
-  defaultAnalysisMode: mysqlEnum("defaultAnalysisMode", ["traditional", "deepseek"]).default("traditional").notNull(),
-  autoSaveResults: int("autoSaveResults").default(1).notNull(), // boolean
-  emailNotifications: int("emailNotifications").default(0).notNull(), // boolean
-  language: varchar("language", { length: 10 }).default("zh-CN").notNull(),
-  theme: mysqlEnum("theme", ["light", "dark", "auto"]).default("auto").notNull(),
-  displayOptions: json("displayOptions"), // { showDetailedMetrics, showVisualization, defaultChartType }
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type UserPreference = typeof userPreferences.$inferSelect;
-export type InsertUserPreference = typeof userPreferences.$inferInsert;

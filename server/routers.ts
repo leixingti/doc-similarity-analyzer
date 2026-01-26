@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { compareDocumentVersions } from "./versionComparison";
 import * as db from "./db";
+import { userManagementRouter } from "./userManagement";
 import { storagePut } from "./storage";
 import { processFile, isValidFileType, getFileExtension } from "./fileProcessor";
 import { analyzeTraditional } from "./traditionalAnalyzer";
@@ -13,6 +14,7 @@ import { nanoid } from "nanoid";
 
 export const appRouter = router({
   system: systemRouter,
+  userManagement: userManagementRouter,
   
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -214,55 +216,6 @@ export const appRouter = router({
       const stats = await db.getAnalysisStatistics(ctx.user.id);
       return stats;
     }),
-  }),
-
-  // 用户偏好设置
-  preferences: router({
-    // 获取用户偏好
-    get: protectedProcedure.query(async ({ ctx }) => {
-      let prefs = await db.getUserPreferences(ctx.user.id);
-      
-      // 如果没有偏好设置，创建默认设置
-      if (!prefs) {
-        await db.createUserPreferences({
-          userId: ctx.user.id,
-          similarityThresholds: { high: 80, medium: 50, low: 20 } as any,
-          defaultAnalysisMode: 'traditional',
-          autoSaveResults: 1,
-          emailNotifications: 0,
-          language: 'zh-CN',
-          theme: 'auto',
-          displayOptions: {
-            showDetailedMetrics: true,
-            showVisualization: true,
-            defaultChartType: 'radar'
-          } as any,
-        });
-        prefs = await db.getUserPreferences(ctx.user.id);
-      }
-      
-      return prefs;
-    }),
-
-    // 更新用户偏好
-    update: protectedProcedure
-      .input(z.object({
-        similarityThresholds: z.object({
-          high: z.number().min(0).max(100),
-          medium: z.number().min(0).max(100),
-          low: z.number().min(0).max(100),
-        }).optional(),
-        defaultAnalysisMode: z.enum(['traditional', 'deepseek']).optional(),
-        autoSaveResults: z.number().optional(),
-        emailNotifications: z.number().optional(),
-        language: z.string().optional(),
-        theme: z.enum(['light', 'dark', 'auto']).optional(),
-        displayOptions: z.any().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.updateUserPreferences(ctx.user.id, input as any);
-        return { success: true };
-      }),
   }),
 
   // 版本对比

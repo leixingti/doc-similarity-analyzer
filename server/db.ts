@@ -5,8 +5,7 @@ import {
   documents, InsertDocument, Document,
   analysisTasks, InsertAnalysisTask, AnalysisTask,
   analysisResults, InsertAnalysisResult, AnalysisResult,
-  similaritySegments, InsertSimilaritySegment, SimilaritySegment,
-  userPreferences, InsertUserPreference, UserPreference
+  similaritySegments, InsertSimilaritySegment, SimilaritySegment
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -207,14 +206,7 @@ export async function getSimilaritySegmentsByResultId(resultId: number): Promise
   return await db.select().from(similaritySegments).where(eq(similaritySegments.resultId, resultId)).orderBy(desc(similaritySegments.similarity));
 }
 
-// ==================== 用户偏好相关 ====================
-
-export async function getUserPreferences(userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const results = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
-  return results[0] || null;
-}
+// ==================== 文档删除相关 ====================
 
 export async function deleteDocument(documentId: number, userId: number) {
   const db = await getDb();
@@ -251,31 +243,6 @@ export async function deleteDocument(documentId: number, userId: number) {
   
   // 删除文档
   await db.delete(documents).where(eq(documents.id, documentId));
-}
-
-export async function createUserPreferences(prefs: InsertUserPreference): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-
-  await db.insert(userPreferences).values(prefs).onDuplicateKeyUpdate({
-    set: {
-      similarityThresholds: prefs.similarityThresholds,
-      defaultAnalysisMode: prefs.defaultAnalysisMode,
-      autoSaveResults: prefs.autoSaveResults,
-      emailNotifications: prefs.emailNotifications,
-      language: prefs.language,
-      theme: prefs.theme,
-      displayOptions: prefs.displayOptions,
-      updatedAt: new Date(),
-    }
-  });
-}
-
-export async function updateUserPreferences(userId: number, updates: Partial<InsertUserPreference>): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-
-  await db.update(userPreferences).set({ ...updates, updatedAt: new Date() }).where(eq(userPreferences.userId, userId));
 }
 
 // ==================== 历史记录和统计相关 ====================

@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { getAuthToken } from "./lib/auth";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -43,9 +44,15 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        const token = getAuthToken();
+        const headers = {
+          ...(init?.headers || {}),
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          headers,
         });
       },
     }),
