@@ -9,8 +9,9 @@ RUN apk add --no-cache python3 make g++
 # 安装 pnpm
 RUN npm install -g pnpm
 
-# 复制 package 文件和 pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml ./
+# 复制 package.json 和 pnpm-lock.yaml
+COPY package.json ./
+COPY pnpm-lock.yaml ./
 
 # 使用 pnpm 安装依赖
 RUN pnpm install --frozen-lockfile
@@ -40,7 +41,8 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
 # 复制必要的文件
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
+COPY pnpm-lock.yaml ./
 COPY drizzle ./drizzle
 
 # 创建非 root 用户
