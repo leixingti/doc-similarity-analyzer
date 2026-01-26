@@ -6,17 +6,20 @@ WORKDIR /app
 # 安装构建依赖
 RUN apk add --no-cache python3 make g++
 
-# 复制 package 文件
-COPY package*.json ./
+# 安装 pnpm
+RUN npm install -g pnpm
 
-# 安装依赖
-RUN npm ci && npm cache clean --force
+# 复制 package 文件和 pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# 使用 pnpm 安装依赖
+RUN pnpm install --frozen-lockfile
 
 # 复制源代码
 COPY . .
 
 # 构建应用
-RUN npm run build
+RUN pnpm run build
 
 # 多阶段构建 - 第二阶段：运行时
 FROM node:22-alpine
@@ -26,6 +29,9 @@ WORKDIR /app
 # 安装运行时依赖
 RUN apk add --no-cache dumb-init curl
 
+# 安装 pnpm
+RUN npm install -g pnpm
+
 # 从构建阶段复制 node_modules
 COPY --from=builder /app/node_modules ./node_modules
 
@@ -34,7 +40,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
 # 复制必要的文件
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 COPY drizzle ./drizzle
 
 # 创建非 root 用户
