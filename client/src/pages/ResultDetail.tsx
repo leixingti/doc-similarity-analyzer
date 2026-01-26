@@ -1,5 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,6 +16,7 @@ export default function ResultDetail() {
   const { taskId } = useParams();
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
+  const [exporting, setExporting] = useState(false);
 
   const { data: task, isLoading } = trpc.analysis.getTask.useQuery(
     { taskId: parseInt(taskId || "0") },
@@ -56,6 +60,84 @@ export default function ResultDetail() {
       </div>
     );
   }
+
+  const handleExportPDF = async () => {
+    setExporting(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let yOffset = 20;
+
+      // Title
+      pdf.setFontSize(20);
+      pdf.text('Document Similarity Analysis Report', pageWidth / 2, yOffset, { align: 'center' });
+      yOffset += 15;
+
+      // Task Info
+      pdf.setFontSize(12);
+      pdf.text(`Task: ${task?.taskName || ''}`, 20, yOffset);
+      yOffset += 8;
+      pdf.text(`Created: ${task?.createdAt ? new Date(task.createdAt).toLocaleString() : ''}`, 20, yOffset);
+      yOffset += 8;
+      pdf.text(`Mode: ${task?.analysisMode === 'traditional' ? 'Traditional' : 'DeepSeek AI'}`, 20, yOffset);
+      yOffset += 15;
+
+      // Overall Similarity
+      pdf.setFontSize(16);
+      pdf.text('Overall Similarity', 20, yOffset);
+      yOffset += 10;
+      pdf.setFontSize(32);
+      pdf.text(`${similarity.toFixed(1)}%`, 20, yOffset);
+      yOffset += 15;
+
+      // Analysis Summary
+      if (result?.summary) {
+        pdf.setFontSize(14);
+        pdf.text('Analysis Summary', 20, yOffset);
+        yOffset += 8;
+        pdf.setFontSize(10);
+        const lines = pdf.splitTextToSize(result.summary, pageWidth - 40);
+        pdf.text(lines, 20, yOffset);
+        yOffset += lines.length * 5 + 10;
+      }
+
+      // Similar Segments
+      if (result?.segments && result.segments.length > 0) {
+        if (yOffset > pageHeight - 40) {
+          pdf.addPage();
+          yOffset = 20;
+        }
+        pdf.setFontSize(14);
+        pdf.text('Similar Segments', 20, yOffset);
+        yOffset += 10;
+
+        result.segments.slice(0, 5).forEach((segment: any, index: number) => {
+          if (yOffset > pageHeight - 30) {
+            pdf.addPage();
+            yOffset = 20;
+          }
+          pdf.setFontSize(10);
+          pdf.text(`Segment ${index + 1} (Similarity: ${segment.similarity.toFixed(1)}%)`, 20, yOffset);
+          yOffset += 6;
+          const text1 = pdf.splitTextToSize(`Doc A: ${segment.text1}`, pageWidth - 40);
+          pdf.text(text1, 20, yOffset);
+          yOffset += text1.length * 4 + 4;
+          const text2 = pdf.splitTextToSize(`Doc B: ${segment.text2}`, pageWidth - 40);
+          pdf.text(text2, 20, yOffset);
+          yOffset += text2.length * 4 + 8;
+        });
+      }
+
+      pdf.save(`analysis-report-${taskId}.pdf`);
+      toast.success('PDF exported successfully!');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('PDF export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const getSimilarityLevel = (similarity: number) => {
     if (similarity >= 80) return { label: "高度相似", color: "text-red-500", bgColor: "bg-red-50 dark:bg-red-950", borderColor: "border-red-200 dark:border-red-800" };
@@ -123,9 +205,18 @@ export default function ResultDetail() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            导出报告
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExportPDF}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {exporting ? '导出中...' : '导出报告'}
           </Button>
         </div>
       </header>

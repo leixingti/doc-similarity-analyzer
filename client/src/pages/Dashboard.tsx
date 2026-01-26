@@ -1,6 +1,9 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import jsPDF from 'jspdf';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -19,6 +22,8 @@ export default function Dashboard() {
   const [createTaskDialogOpen, setCreateTaskDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedTasks, setSelectedTasks] = useState<number[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   const { data: documents, refetch: refetchDocuments } = trpc.documents.list.useQuery(undefined, {
     enabled: !!user,
@@ -96,6 +101,60 @@ export default function Dashboard() {
   const [taskName, setTaskName] = useState("");
   const [selectedDocs, setSelectedDocs] = useState<number[]>([]);
   const [analysisMode, setAnalysisMode] = useState<"traditional" | "deepseek">("traditional");
+
+  const handleBatchExport = async () => {
+    if (selectedTasks.length === 0) {
+      toast.error('请选择要导出的任务');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const zip = new JSZip();
+      const tasksToExport = tasks?.filter(t => selectedTasks.includes(t.id)) || [];
+
+      for (const task of tasksToExport) {
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        let yOffset = 20;
+
+        // Title
+        pdf.setFontSize(20);
+        pdf.text('Document Similarity Analysis Report', pageWidth / 2, yOffset, { align: 'center' });
+        yOffset += 15;
+
+        // Task Info
+        pdf.setFontSize(12);
+        pdf.text(`Task: ${task.taskName}`, 20, yOffset);
+        yOffset += 8;
+        pdf.text(`Created: ${new Date(task.createdAt).toLocaleString()}`, 20, yOffset);
+        yOffset += 8;
+        pdf.text(`Mode: ${task.analysisMode === 'traditional' ? 'Traditional' : 'DeepSeek AI'}`, 20, yOffset);
+        yOffset += 15;
+
+        // Overall Similarity
+        pdf.setFontSize(16);
+        pdf.text('Overall Similarity', 20, yOffset);
+        yOffset += 10;
+        pdf.setFontSize(32);
+        pdf.text(`${(task.overallSimilarity || 0).toFixed(1)}%`, 20, yOffset);
+        yOffset += 15;
+
+        const pdfBlob = pdf.output('blob');
+        zip.file(`${task.taskName}-${task.id}.pdf`, pdfBlob);
+      }
+
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, `analysis-reports-${Date.now()}.zip`);
+      toast.success(`成功导出 ${tasksToExport.length} 个报告！`);
+      setSelectedTasks([]);
+    } catch (error) {
+      console.error('Batch export error:', error);
+      toast.error('批量导出失败');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleCreateTask = () => {
     if (!taskName) {
@@ -217,6 +276,11 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
 
+          <Button variant="outline" onClick={() => setLocation("/history")}>
+            <Clock className="mr-2 h-4 w-4" />
+            历史记录
+          </Button>
+
           <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -320,8 +384,41 @@ export default function Dashboard() {
         {/* Tasks */}
         <Card>
           <CardHeader>
-            <CardTitle>分析任务</CardTitle>
-            <CardDescription>共 {tasks?.length || 0} 个任务</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>分析任务</CardTitle>
+                <CardDescription>共 {tasks?.length || 0} 个任务</CardDescription>
+              </div>
+              {tasks && tasks.length > 0 && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (selectedTasks.length === tasks.length) {
+                        setSelectedTasks([]);
+                      } else {
+                        setSelectedTasks(tasks.map(t => t.id));
+                      }
+                    }}
+                  >
+                    {selectedTasks.length === tasks.length ? '取消全选' : '全选'}
+                  </Button>
+                  {selectedTasks.length > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={handleBatchExport}
+                      disabled={exporting}
+                    >
+                      {exporting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      {exporting ? '导出中...' : `导出选中 (${selectedTasks.length})`}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {!tasks || tasks.length === 0 ? (
@@ -331,6 +428,18 @@ export default function Dashboard() {
                 {tasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-4 border rounded">
                     <div className="flex items-center gap-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedTasks.includes(task.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedTasks([...selectedTasks, task.id]);
+                          } else {
+                            setSelectedTasks(selectedTasks.filter(id => id !== task.id));
+                          }
+                        }}
+                        className="h-4 w-4"
+                      />
                       {getStatusIcon(task.status)}
                       <div>
                         <p className="font-medium">{task.taskName}</p>
