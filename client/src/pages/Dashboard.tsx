@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -316,6 +316,11 @@ export default function Dashboard() {
           <Button variant="outline" onClick={() => setLocation("/history")}>
             <Clock className="mr-2 h-4 w-4" />
             历史记录
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/version-comparison")}>
+            <GitCompare className="mr-2 h-4 w-4" />
+            版本对比
           </Button>
 
           <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>

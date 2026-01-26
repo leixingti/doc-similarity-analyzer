@@ -3,6 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
+import { compareDocumentVersions } from "./versionComparison";
 import * as db from "./db";
 import { storagePut } from "./storage";
 import { processFile, isValidFileType, getFileExtension } from "./fileProcessor";
@@ -261,6 +262,44 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await db.updateUserPreferences(ctx.user.id, input as any);
         return { success: true };
+      }),
+  }),
+
+  // 版本对比
+  versions: router({
+    compare: protectedProcedure
+      .input(
+        z.object({
+          document1Id: z.number(),
+          document2Id: z.number(),
+        })
+      )
+      .query(async ({ input, ctx }) => {
+        const doc1 = await db.getDocumentById(input.document1Id);
+        const doc2 = await db.getDocumentById(input.document2Id);
+
+        if (!doc1 || !doc2) {
+          throw new Error('文档不存在');
+        }
+
+        // 验证权限
+        if (doc1.userId !== ctx.user.id || doc2.userId !== ctx.user.id) {
+          throw new Error('无权访问此文档');
+        }
+
+        // 获取文档内容
+        const content1 = doc1.extractedText || '';
+        const content2 = doc2.extractedText || '';
+
+        // 对比版本
+        const result = await compareDocumentVersions(
+          content1,
+          content2,
+          { id: doc1.id, filename: doc1.filename },
+          { id: doc2.id, filename: doc2.filename }
+        );
+
+        return result;
       }),
   }),
 });
