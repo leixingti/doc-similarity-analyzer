@@ -8,7 +8,8 @@ import * as db from "./db";
 import { userManagementRouter } from "./userManagement";
 import { storagePut } from "./storage";
 import { processFile, isValidFileType, getFileExtension } from "./fileProcessor";
-import { analyzeTraditional } from "./traditionalAnalyzer";
+import { traditionalAnalyze } from './traditionalAnalyzer';
+import { generatePDFReport, generateMarkdownReport, type ReportData } from './reportGenerator';
 import { analyzeWithDeepSeek } from "./deepseekAnalyzer";
 import { nanoid } from "nanoid";
 
@@ -228,6 +229,120 @@ export const appRouter = router({
       const stats = await db.getAnalysisStatistics(ctx.user.id);
       return stats;
     }),
+
+    // 导出 PDF 报告
+    exportPDF: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getAnalysisTaskById(input.taskId);
+        if (!task || task.userId !== ctx.user.id) {
+          throw new Error('任务不存在或无权限');
+        }
+
+        const result = await db.getAnalysisResult(input.taskId);
+        if (!result) {
+          throw new Error('分析结果不存在');
+        }
+
+        const doc1 = await db.getDocumentById(task.document1Id);
+        const doc2 = await db.getDocumentById(task.document2Id);
+
+        const reportData: ReportData = {
+          taskName: task.taskName,
+          createdAt: task.createdAt.toLocaleString('zh-CN'),
+          analysisMode: task.analysisMode,
+          overallSimilarity: Math.round(result.overallSimilarity),
+          summary: result.summary,
+          details: {
+            semanticSimilarity: Math.round(result.semanticSimilarity || 0),
+            structuralSimilarity: Math.round(result.structuralSimilarity || 0),
+            styleSimilarity: Math.round(result.styleSimilarity || 0),
+            topicSimilarity: Math.round(result.topicSimilarity || 0),
+            toneSimilarity: Math.round(result.toneSimilarity || 0),
+            vocabularySimilarity: Math.round(result.vocabularySimilarity || 0),
+          },
+          riskLevel: result.riskLevel as 'high' | 'medium' | 'low',
+          riskDescription: result.riskDescription,
+          recommendations: result.recommendations || [],
+          segments: result.segments || [],
+          documents: [
+            {
+              filename: doc1?.filename || '文档1',
+              fileType: doc1?.fileType || 'unknown',
+              fileSize: Math.round((doc1?.fileSize || 0) / 1024),
+            },
+            {
+              filename: doc2?.filename || '文档2',
+              fileType: doc2?.fileType || 'unknown',
+              fileSize: Math.round((doc2?.fileSize || 0) / 1024),
+            },
+          ],
+        };
+
+        const pdfBuffer = await generatePDFReport(reportData);
+        return {
+          success: true,
+          filename: `report_${input.taskId}_${Date.now()}.pdf`,
+          data: pdfBuffer.toString('base64'),
+        };
+      }),
+
+    // 导出 Markdown 报告
+    exportMarkdown: protectedProcedure
+      .input(z.object({ taskId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const task = await db.getAnalysisTaskById(input.taskId);
+        if (!task || task.userId !== ctx.user.id) {
+          throw new Error('任务不存在或无权限');
+        }
+
+        const result = await db.getAnalysisResult(input.taskId);
+        if (!result) {
+          throw new Error('分析结果不存在');
+        }
+
+        const doc1 = await db.getDocumentById(task.document1Id);
+        const doc2 = await db.getDocumentById(task.document2Id);
+
+        const reportData: ReportData = {
+          taskName: task.taskName,
+          createdAt: task.createdAt.toLocaleString('zh-CN'),
+          analysisMode: task.analysisMode,
+          overallSimilarity: Math.round(result.overallSimilarity),
+          summary: result.summary,
+          details: {
+            semanticSimilarity: Math.round(result.semanticSimilarity || 0),
+            structuralSimilarity: Math.round(result.structuralSimilarity || 0),
+            styleSimilarity: Math.round(result.styleSimilarity || 0),
+            topicSimilarity: Math.round(result.topicSimilarity || 0),
+            toneSimilarity: Math.round(result.toneSimilarity || 0),
+            vocabularySimilarity: Math.round(result.vocabularySimilarity || 0),
+          },
+          riskLevel: result.riskLevel as 'high' | 'medium' | 'low',
+          riskDescription: result.riskDescription,
+          recommendations: result.recommendations || [],
+          segments: result.segments || [],
+          documents: [
+            {
+              filename: doc1?.filename || '文档1',
+              fileType: doc1?.fileType || 'unknown',
+              fileSize: Math.round((doc1?.fileSize || 0) / 1024),
+            },
+            {
+              filename: doc2?.filename || '文档2',
+              fileType: doc2?.fileType || 'unknown',
+              fileSize: Math.round((doc2?.fileSize || 0) / 1024),
+            },
+          ],
+        };
+
+        const markdown = generateMarkdownReport(reportData);
+        return {
+          success: true,
+          filename: `report_${input.taskId}_${Date.now()}.md`,
+          data: markdown,
+        };
+      }),
   }),
 
   // 版本对比
