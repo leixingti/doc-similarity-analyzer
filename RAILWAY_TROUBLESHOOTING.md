@@ -51,44 +51,27 @@ pnpm-lock.yaml
 yarn.lock
 ```
 
-**修改后的 .dockerignore：**
+### 4. ❌ pnpm patches 文件不存在
+
+**错误信息：**
 ```
-node_modules
-npm-debug.log
-.git
-.gitignore
-README.md
-.env
-.env.local
-.env.*.local
-.DS_Store
-dist
-.vite
-.manus-logs
-.next
-.nuxt
-out
-build
-coverage
-.nyc_output
-.cache
-.turbo
-.pnpm-store
-.idea
-.vscode
-*.swp
-*.swo
-*~
-.prettierignore
-.eslintignore
-.editorconfig
-.github
-.gitattributes
-CONTRIBUTING.md
-LICENSE
-docker-compose.yml
-Dockerfile.dev
-.dockerignore
+ENOENT: no such file or directory, open '/app/patches/wouter@3.7.1.patch'
+```
+
+**原因：** `pnpm-lock.yaml` 中引用了 `patches` 目录中的文件，但该目录没有被复制到 Docker 镜像中
+
+**解决方案：**
+在 Dockerfile 中添加 `patches` 目录的复制：
+```dockerfile
+# 复制 package.json 和 pnpm-lock.yaml
+COPY package.json ./
+COPY pnpm-lock.yaml ./
+
+# 复制 patches 目录（如果存在）
+COPY patches ./patches
+
+# 使用 pnpm 安装依赖
+RUN pnpm install --frozen-lockfile
 ```
 
 ## 部署检查清单
@@ -106,6 +89,11 @@ Dockerfile.dev
   - 明确指定文件名
   - 例如：`COPY package.json ./` 和 `COPY pnpm-lock.yaml ./`
 
+- [ ] **复制了所有必需的目录**
+  - `patches` 目录（如果存在）
+  - `drizzle` 目录（数据库迁移）
+  - `public` 目录（静态文件）
+
 - [ ] **.dockerignore 不排除必要文件**
   - `pnpm-lock.yaml` 不在 `.dockerignore` 中
   - `yarn.lock` 不在 `.dockerignore` 中（如果使用 yarn）
@@ -120,13 +108,17 @@ Dockerfile.dev
   - 文件存在于项目根目录
   - 与 `package.json` 同步
 
+- [ ] **patches 目录存在（如果需要）**
+  - 如果 `pnpm-lock.yaml` 中有 patches，目录必须存在
+  - 所有引用的 patch 文件都必须存在
+
 ## 部署流程
 
 ### 第 1 步：本地验证
 
 ```bash
 # 检查文件是否存在
-ls -la package.json pnpm-lock.yaml
+ls -la package.json pnpm-lock.yaml patches/
 
 # 检查 .dockerignore
 cat .dockerignore | grep -E "pnpm-lock|yarn.lock"
@@ -198,6 +190,9 @@ A: 通常 `.dockerignore` 用于减小镜像大小，但对于使用 pnpm 的项
 
 **Q: 我应该使用 npm 还是 pnpm？**
 A: 使用 pnpm。它更快，更节省空间，并且是项目的默认包管理器。
+
+**Q: 如何处理 pnpm patches？**
+A: 确保 `patches` 目录存在于项目根目录，并在 Dockerfile 中复制它。
 
 **Q: 如何强制重新部署？**
 A: 在 Railway 中，点击 "Redeploy" 按钮，或推送新代码到 GitHub。
