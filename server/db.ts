@@ -21,8 +21,13 @@ export async function getDb() {
     try {
       console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
       
-      // Use mysql2 directly to test connection
-      const connection = await mysql.createConnection(dbUrl);
+      // Use mysql2 directly to test connection with SSL
+      const connection = await mysql.createConnection({
+        uri: dbUrl,
+        ssl: {
+          rejectUnauthorized: true
+        }
+      });
       console.log('[Database] mysql2 connection successful');
       
       const [rows] = await connection.execute('SELECT 1 as ok');
@@ -30,8 +35,15 @@ export async function getDb() {
       
       await connection.end();
 
-      _db = drizzle(dbUrl);
-      console.log('[Database] Drizzle initialized');
+      const pool = mysql.createPool({
+        uri: dbUrl,
+        ssl: {
+          rejectUnauthorized: true
+        },
+        connectionLimit: 10,
+      });
+      _db = drizzle(pool);
+      console.log('[Database] Drizzle initialized with pool and SSL');
       
       // Test Drizzle query
       try {
