@@ -1,5 +1,6 @@
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { 
   InsertUser, users,
   documents, InsertDocument, Document,
@@ -11,7 +12,7 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
-export function getDb() {
+export async function getDb() {
   if (!_db) {
     // Force use of TiDB Serverless connection string to bypass Railway env var issues
     const dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
@@ -19,17 +20,20 @@ export function getDb() {
 
     try {
       console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
-      _db = drizzle(dbUrl);
-      console.log('[Database] Successfully connected');
       
-      // Test query
-      _db.select().from(users).limit(1).then(() => {
-        console.log('[Database] Test query successful');
-      }).catch(err => {
-        console.error('[Database] Test query failed:', err);
-      });
+      // Use mysql2 directly to test connection
+      const connection = await mysql.createConnection(dbUrl);
+      console.log('[Database] mysql2 connection successful');
+      
+      const [rows] = await connection.execute('SELECT 1 as ok');
+      console.log('[Database] mysql2 test query successful:', rows);
+      
+      await connection.end();
+
+      _db = drizzle(dbUrl);
+      console.log('[Database] Drizzle initialized');
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
