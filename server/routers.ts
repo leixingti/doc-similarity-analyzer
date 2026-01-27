@@ -9,7 +9,7 @@ import { userManagementRouter } from "./userManagement";
 import { statisticsRouter } from "./statistics";
 import { storagePut } from "./storage";
 import { processFile, isValidFileType, getFileExtension } from "./fileProcessor";
-import { traditionalAnalyze } from './traditionalAnalyzer';
+import { analyzeTraditional } from './traditionalAnalyzer';
 import { generatePDFReport, generateMarkdownReport, type ReportData } from './reportGenerator';
 import { analyzeWithDeepSeek } from "./deepseekAnalyzer";
 import { nanoid } from "nanoid";
