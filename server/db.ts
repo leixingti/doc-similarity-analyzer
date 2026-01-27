@@ -21,6 +21,13 @@ export function getDb() {
       console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
       _db = drizzle(dbUrl);
       console.log('[Database] Successfully connected');
+      
+      // Test query
+      _db.select().from(users).limit(1).then(() => {
+        console.log('[Database] Test query successful');
+      }).catch(err => {
+        console.error('[Database] Test query failed:', err);
+      });
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
