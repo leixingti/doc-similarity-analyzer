@@ -23,8 +23,13 @@ export async function getDb() {
       
       // Use mysql2 directly to test connection with SSL
       const connection = await mysql.createConnection({
-        uri: dbUrl,
+        host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+        port: 4000,
+        user: '2SDxeZiTrYjeW97.root',
+        password: 'E8io4SjtjPyWNHLA',
+        database: 'test',
         ssl: {
+          minVersion: 'TLSv1.2',
           rejectUnauthorized: true
         }
       });
@@ -36,8 +41,13 @@ export async function getDb() {
       await connection.end();
 
       const pool = mysql.createPool({
-        uri: dbUrl,
+        host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+        port: 4000,
+        user: '2SDxeZiTrYjeW97.root',
+        password: 'E8io4SjtjPyWNHLA',
+        database: 'test',
         ssl: {
+          minVersion: 'TLSv1.2',
           rejectUnauthorized: true
         },
         connectionLimit: 10,
