@@ -178,8 +178,8 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* OAuth登录按钮 */}
-              <Button
+              {/* OAuth登录按钮 - 已隐藏 */}
+              {/* <Button
                 type="button"
                 variant="outline"
                 className="w-full"
@@ -187,12 +187,12 @@ export default function Login() {
                 disabled={isLoading}
               >
                 使用 Manus 账号登录
-              </Button>
+              </Button> */}
 
-              {/* 提示信息 */}
-              <p className="text-sm text-center text-gray-600">
+              {/* 提示信息 - 已隐藏 */}
+              {/* <p className="text-sm text-center text-gray-600">
                 默认管理员账号：admin@system.local / 123456
-              </p>
+              </p> */}
             </TabsContent>
 
             {/* 注册标签页 */}
