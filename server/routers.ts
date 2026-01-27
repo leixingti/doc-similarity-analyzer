@@ -246,27 +246,44 @@ export const appRouter = router({
           throw new Error('分析结果不存在');
         }
 
+        // 查询相似片段
+        const segments = await db.getSimilaritySegmentsByResultId(result.id);
+
         const doc1 = await db.getDocumentById(task.document1Id);
         const doc2 = await db.getDocumentById(task.document2Id);
+
+        // 解析details JSON
+        const details = typeof result.details === 'string' ? JSON.parse(result.details) : (result.details || {});
+        
+        // 解析recommendations JSON
+        const recommendations = typeof result.recommendations === 'string' ? JSON.parse(result.recommendations) : (result.recommendations || []);
 
         const reportData: ReportData = {
           taskName: task.taskName,
           createdAt: task.createdAt.toLocaleString('zh-CN'),
           analysisMode: task.analysisMode,
-          overallSimilarity: Math.round(result.overallSimilarity),
-          summary: result.summary,
+          overallSimilarity: result.overallSimilarity,
+          summary: result.summary || '',
           details: {
-            semanticSimilarity: Math.round(result.semanticSimilarity || 0),
-            structuralSimilarity: Math.round(result.structuralSimilarity || 0),
-            styleSimilarity: Math.round(result.styleSimilarity || 0),
-            topicSimilarity: Math.round(result.topicSimilarity || 0),
-            toneSimilarity: Math.round(result.toneSimilarity || 0),
-            vocabularySimilarity: Math.round(result.vocabularySimilarity || 0),
+            semanticSimilarity: details.semanticSimilarity,
+            structuralSimilarity: details.structuralSimilarity,
+            styleSimilarity: details.styleSimilarity,
+            topicSimilarity: details.topicSimilarity,
+            toneSimilarity: details.toneSimilarity,
+            vocabularySimilarity: details.vocabularySimilarity,
+            cosineSimilarity: details.cosineSimilarity,
+            jaccardSimilarity: details.jaccardSimilarity,
+            tfidfSimilarity: details.tfidfSimilarity,
           },
-          riskLevel: result.riskLevel as 'high' | 'medium' | 'low',
-          riskDescription: result.riskDescription,
-          recommendations: result.recommendations || [],
-          segments: result.segments || [],
+          riskLevel: result.riskLevel as 'high' | 'medium' | 'low' | undefined,
+          riskDescription: result.riskDescription || undefined,
+          recommendations: Array.isArray(recommendations) ? recommendations : [],
+          segments: segments.map(seg => ({
+            doc1Segment: seg.doc1Segment,
+            doc2Segment: seg.doc2Segment,
+            similarity: seg.similarity,
+            reason: seg.reason || undefined,
+          })),
           documents: [
             {
               filename: doc1?.filename || '文档1',
@@ -303,27 +320,44 @@ export const appRouter = router({
           throw new Error('分析结果不存在');
         }
 
+        // 查询相似片段
+        const segments = await db.getSimilaritySegmentsByResultId(result.id);
+
         const doc1 = await db.getDocumentById(task.document1Id);
         const doc2 = await db.getDocumentById(task.document2Id);
+
+        // 解析details JSON
+        const details = typeof result.details === 'string' ? JSON.parse(result.details) : (result.details || {});
+        
+        // 解析recommendations JSON
+        const recommendations = typeof result.recommendations === 'string' ? JSON.parse(result.recommendations) : (result.recommendations || []);
 
         const reportData: ReportData = {
           taskName: task.taskName,
           createdAt: task.createdAt.toLocaleString('zh-CN'),
           analysisMode: task.analysisMode,
-          overallSimilarity: Math.round(result.overallSimilarity),
-          summary: result.summary,
+          overallSimilarity: result.overallSimilarity,
+          summary: result.summary || '',
           details: {
-            semanticSimilarity: Math.round(result.semanticSimilarity || 0),
-            structuralSimilarity: Math.round(result.structuralSimilarity || 0),
-            styleSimilarity: Math.round(result.styleSimilarity || 0),
-            topicSimilarity: Math.round(result.topicSimilarity || 0),
-            toneSimilarity: Math.round(result.toneSimilarity || 0),
-            vocabularySimilarity: Math.round(result.vocabularySimilarity || 0),
+            semanticSimilarity: details.semanticSimilarity,
+            structuralSimilarity: details.structuralSimilarity,
+            styleSimilarity: details.styleSimilarity,
+            topicSimilarity: details.topicSimilarity,
+            toneSimilarity: details.toneSimilarity,
+            vocabularySimilarity: details.vocabularySimilarity,
+            cosineSimilarity: details.cosineSimilarity,
+            jaccardSimilarity: details.jaccardSimilarity,
+            tfidfSimilarity: details.tfidfSimilarity,
           },
-          riskLevel: result.riskLevel as 'high' | 'medium' | 'low',
-          riskDescription: result.riskDescription,
-          recommendations: result.recommendations || [],
-          segments: result.segments || [],
+          riskLevel: result.riskLevel as 'high' | 'medium' | 'low' | undefined,
+          riskDescription: result.riskDescription || undefined,
+          recommendations: Array.isArray(recommendations) ? recommendations : [],
+          segments: segments.map(seg => ({
+            doc1Segment: seg.doc1Segment,
+            doc2Segment: seg.doc2Segment,
+            similarity: seg.similarity,
+            reason: seg.reason || undefined,
+          })),
           documents: [
             {
               filename: doc1?.filename || '文档1',
