@@ -21,8 +21,10 @@ import logger from "./logger";
 import { initializeDatabase } from "../db-optimized";
 
 async function initializeApp() {
-  // 初始化数据库
-  await initializeDatabase();
+  // 初始化数据库（非阻塞，失败不会停止应用启动）
+  initializeDatabase().catch((error) => {
+    logger.warn({ err: error }, "Failed to initialize database on startup. App will continue running.");
+  });
   const app = express();
   const server = createServer(app);
   
