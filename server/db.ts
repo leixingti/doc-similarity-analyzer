@@ -32,6 +32,14 @@ export async function getDb() {
 
       _db = drizzle(dbUrl);
       console.log('[Database] Drizzle initialized');
+      
+      // Test Drizzle query
+      try {
+        const testResult = await _db.execute(sql`SELECT 1 as ok`);
+        console.log('[Database] Drizzle test query successful:', testResult);
+      } catch (err) {
+        console.error('[Database] Drizzle test query failed:', err);
+      }
     } catch (error) {
       console.error("[Database] Failed to connect:", error);
       _db = null;
