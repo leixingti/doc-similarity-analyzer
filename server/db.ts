@@ -13,10 +13,25 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export function getDb() {
   if (!_db) {
-    const dbUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+    let dbUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+    
+    // If no direct URL, try to construct from individual Railway variables
+    if (!dbUrl && process.env.MYSQL_HOST) {
+      const host = process.env.MYSQL_HOST || 'localhost';
+      const port = process.env.MYSQL_PORT || '3306';
+      const user = process.env.MYSQL_USER || 'root';
+      const password = process.env.MYSQL_PASSWORD || '';
+      const database = process.env.MYSQL_DATABASE || 'railway';
+      
+      dbUrl = `mysql://${user}:${password}@${host}:${port}/${database}`;
+      console.log('[Database] Constructed URL from Railway variables');
+    }
+    
     if (dbUrl) {
       try {
+        console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
         _db = drizzle(dbUrl);
+        console.log('[Database] Successfully connected');
       } catch (error) {
         console.warn("[Database] Failed to connect:", error);
         _db = null;
