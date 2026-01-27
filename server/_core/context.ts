@@ -24,13 +24,16 @@ export async function createContext(
     const token = authHeader.substring(7);
     try {
       const decoded = jwt.verify(token, ENV.cookieSecret) as { userId: number };
-      const db = getDb();
-      const result = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
-      if (result.length > 0) {
-        user = result[0];
+      const db = await getDb();
+      if (db) {
+        const result = await db.select().from(users).where(eq(users.id, decoded.userId)).limit(1);
+        if (result.length > 0) {
+          user = result[0];
+        }
       }
     } catch (error) {
       // JWT verification failed, try OAuth
+      console.error('[Context] JWT verification error:', error);
     }
   }
 
