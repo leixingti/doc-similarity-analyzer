@@ -1,4 +1,4 @@
-'''import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users,
@@ -339,4 +339,3 @@ export async function deleteAnalysisTask(taskId: number) {
   await db.delete(analysisTasks)
     .where(eq(analysisTasks.id, taskId));
 }
-'''
