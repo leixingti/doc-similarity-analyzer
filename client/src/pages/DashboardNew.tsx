@@ -10,14 +10,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { getLoginUrl } from "@/const";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3 } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
+import { DashboardStats } from "@/components/DashboardStats";
+import { DocumentFilters } from "@/components/DocumentFilters";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-export default function Dashboard() {
+export default function DashboardNew() {
   const { user, loading: authLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -33,6 +46,11 @@ export default function Dashboard() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [documentToPreview, setDocumentToPreview] = useState<any>(null);
 
+  // 搜索和筛选状态
+  const [searchTerm, setSearchTerm] = useState("");
+  const [fileTypeFilter, setFileTypeFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
+
   const { data: documents, refetch: refetchDocuments } = trpc.documents.list.useQuery(undefined, {
     enabled: !!user,
   });
@@ -40,6 +58,48 @@ export default function Dashboard() {
   const { data: tasks, refetch: refetchTasks } = trpc.analysis.listTasks.useQuery(undefined, {
     enabled: !!user,
   });
+
+  // 过滤文档
+  const filteredDocuments = useMemo(() => {
+    if (!documents) return [];
+
+    return documents.filter((doc) => {
+      // 搜索过滤
+      if (searchTerm && !doc.filename.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+
+      // 文件类型过滤
+      if (fileTypeFilter !== "all" && doc.fileType !== fileTypeFilter) {
+        return false;
+      }
+
+      // 日期过滤
+      if (dateFilter !== "all") {
+        const docDate = new Date(doc.createdAt);
+        const now = new Date();
+        const diffTime = now.getTime() - docDate.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+        switch (dateFilter) {
+          case "today":
+            if (diffDays > 1) return false;
+            break;
+          case "week":
+            if (diffDays > 7) return false;
+            break;
+          case "month":
+            if (diffDays > 30) return false;
+            break;
+          case "year":
+            if (diffDays > 365) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+  }, [documents, searchTerm, fileTypeFilter, dateFilter]);
 
   const deleteDocumentMutation = trpc.documents.delete.useMutation({
     onSuccess: () => {
@@ -243,8 +303,7 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    window.location.href = 
-'/login';
+    window.location.href = '/login';
     return null;
   }
 
@@ -274,10 +333,29 @@ export default function Dashboard() {
     }
   };
 
+  const getFileTypeBadge = (fileType: string) => {
+    const colors: Record<string, string> = {
+      pdf: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300",
+      docx: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      doc: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+      txt: "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300",
+      md: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
+      html: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+      pptx: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
+      xlsx: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+    };
+
+    return (
+      <Badge variant="secondary" className={colors[fileType] || ""}>
+        {fileType.toUpperCase()}
+      </Badge>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-card">
+      <header className="border-b bg-card sticky top-0 z-10">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
@@ -285,6 +363,9 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">欢迎, {user.name || user.email}</span>
+            {user.role === 'admin' && (
+              <Badge variant="outline" className="text-xs">管理员</Badge>
+            )}
             <Button variant="outline" size="sm" onClick={() => logout()}>
               登出
             </Button>
@@ -292,9 +373,12 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="container py-8">
-        {/* Actions */}
-        <div className="flex gap-4 mb-8">
+      <div className="container py-8 space-y-8">
+        {/* 统计卡片 */}
+        <DashboardStats />
+
+        {/* 快捷操作 */}
+        <div className="flex flex-wrap gap-4">
           <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -345,15 +429,15 @@ export default function Dashboard() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => {
-                setUploadDialogOpen(false);
-                setSelectedFiles([]);
-              }} disabled={uploading}>
-                取消
-              </Button>
-              <Button onClick={handleUpload} disabled={selectedFiles.length === 0 || uploading}>
-                {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {uploading ? `上传中 (${currentUploadIndex + 1}/${selectedFiles.length})...` : `上传 (${selectedFiles.length} 个文件)`}
-              </Button>
+                  setUploadDialogOpen(false);
+                  setSelectedFiles([]);
+                }} disabled={uploading}>
+                  取消
+                </Button>
+                <Button onClick={handleUpload} disabled={selectedFiles.length === 0 || uploading}>
+                  {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  {uploading ? `上传中 (${currentUploadIndex + 1}/${selectedFiles.length})...` : `上传 (${selectedFiles.length} 个文件)`}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -380,7 +464,7 @@ export default function Dashboard() {
                 创建分析任务
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>创建分析任务</DialogTitle>
                 <DialogDescription>
@@ -399,74 +483,105 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <Label>分析模式</Label>
-                  <Select value={analysisMode} onValueChange={(v) => setAnalysisMode(v as any)}>
+                  <Select value={analysisMode} onValueChange={(v: any) => setAnalysisMode(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="traditional">传统算法（快速）</SelectItem>
-                      <SelectItem value="deepseek">DeepSeek AI（智能）</SelectItem>
+                      <SelectItem value="traditional">传统算法</SelectItem>
+                      <SelectItem value="deepseek">DeepSeek AI</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>选择文档（选择2个）</Label>
-                  <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
+                  <Label>选择文档 (必须选择2个)</Label>
+                  <div className="mt-2 space-y-2 max-h-60 overflow-y-auto border rounded-md p-3">
                     {documents?.map((doc) => (
-                      <label key={doc.id} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-accent">
-                        <input
-                          type="checkbox"
+                      <div key={doc.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`doc-${doc.id}`}
                           checked={selectedDocs.includes(doc.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
+                          onCheckedChange={(checked) => {
+                            if (checked) {
                               if (selectedDocs.length < 2) {
                                 setSelectedDocs([...selectedDocs, doc.id]);
+                              } else {
+                                toast.error("最多只能选择2个文档");
                               }
                             } else {
                               setSelectedDocs(selectedDocs.filter(id => id !== doc.id));
                             }
                           }}
                         />
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{doc.filename}</span>
-                      </label>
+                        <label
+                          htmlFor={`doc-${doc.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                        >
+                          {doc.filename} ({getFileTypeBadge(doc.fileType)})
+                        </label>
+                      </div>
                     ))}
                   </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    已选择: {selectedDocs.length}/2
+                  </p>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateTaskDialogOpen(false)}>
+                <Button variant="outline" onClick={() => {
+                  setCreateTaskDialogOpen(false);
+                  setTaskName("");
+                  setSelectedDocs([]);
+                }}>
                   取消
                 </Button>
-                <Button onClick={handleCreateTask}>创建任务</Button>
+                <Button onClick={handleCreateTask} disabled={selectedDocs.length !== 2 || !taskName}>
+                  创建任务
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Documents */}
-        <Card className="mb-8">
+        {/* 文档列表 */}
+        <Card>
           <CardHeader>
             <CardTitle>我的文档</CardTitle>
-            <CardDescription>已上传 {documents?.length || 0} 个文档</CardDescription>
+            <CardDescription>
+              管理您上传的文档，共 {filteredDocuments.length} 个文档
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            {!documents || documents.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">暂无文档，请先上传</p>
+            <DocumentFilters
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              fileTypeFilter={fileTypeFilter}
+              onFileTypeChange={setFileTypeFilter}
+              dateFilter={dateFilter}
+              onDateChange={setDateFilter}
+            />
+            {filteredDocuments.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {documents && documents.length > 0 ? "没有找到匹配的文档" : "还没有上传任何文档"}
+              </div>
             ) : (
               <div className="space-y-2">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded">
-                    <div className="flex items-center gap-3">
-                      <FileText className="h-5 w-5 text-primary" />
-                      <div>
-                        <p className="font-medium">{doc.filename}</p>
+                {filteredDocuments.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{doc.filename}</p>
                         <p className="text-sm text-muted-foreground">
-                          {doc.fileType.toUpperCase()} · {(doc.fileSize / 1024).toFixed(2)} KB
+                          {(doc.fileSize / 1024).toFixed(2)} KB • {new Date(doc.createdAt).toLocaleDateString()}
                         </p>
                       </div>
+                      {getFileTypeBadge(doc.fileType)}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -485,7 +600,7 @@ export default function Dashboard() {
                           setDeleteDialogOpen(true);
                         }}
                       >
-                        <XCircle className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
@@ -495,83 +610,79 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Tasks */}
+        {/* 最近的任务 */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>分析任务</CardTitle>
-                <CardDescription>共 {tasks?.length || 0} 个任务</CardDescription>
+                <CardTitle>最近的分析任务</CardTitle>
+                <CardDescription>
+                  查看您最近创建的分析任务
+                </CardDescription>
               </div>
-              {tasks && tasks.length > 0 && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (selectedTasks.length === tasks.length) {
-                        setSelectedTasks([]);
-                      } else {
-                        setSelectedTasks(tasks.map(t => t.id));
-                      }
-                    }}
-                  >
-                    {selectedTasks.length === tasks.length ? '取消全选' : '全选'}
-                  </Button>
-                  {selectedTasks.length > 0 && (
-                    <Button
-                      size="sm"
-                      onClick={handleBatchExport}
-                      disabled={exporting}
-                    >
-                      {exporting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      {exporting ? '导出中...' : `导出选中 (${selectedTasks.length})`}
-                    </Button>
+              {selectedTasks.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleBatchExport}
+                  disabled={exporting}
+                >
+                  {exporting ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
                   )}
-                </div>
+                  导出选中 ({selectedTasks.length})
+                </Button>
               )}
             </div>
           </CardHeader>
           <CardContent>
             {!tasks || tasks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">暂无任务，请创建分析任务</p>
+              <div className="text-center py-12 text-muted-foreground">
+                还没有创建任何分析任务
+              </div>
             ) : (
               <div className="space-y-2">
-                {tasks.map((task) => (
-                  <div key={task.id} className="flex items-center justify-between p-4 border rounded">
-                    <div className="flex items-center gap-4">
-                      <input
-                        type="checkbox"
+                {tasks.slice(0, 10).map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Checkbox
                         checked={selectedTasks.includes(task.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
+                        onCheckedChange={(checked) => {
+                          if (checked) {
                             setSelectedTasks([...selectedTasks, task.id]);
                           } else {
                             setSelectedTasks(selectedTasks.filter(id => id !== task.id));
                           }
                         }}
-                        className="h-4 w-4"
                       />
                       {getStatusIcon(task.status)}
-                      <div>
-                        <p className="font-medium">{task.taskName}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{task.taskName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {getStatusText(task.status)} · {task.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'}
-                          {task.similarity !== null && ` · 相似度 ${task.similarity.toFixed(1)}%`}
+                          {getStatusText(task.status)} • {new Date(task.createdAt).toLocaleDateString()}
+                          {task.similarity !== null && ` • 相似度: ${task.similarity.toFixed(1)}%`}
                         </p>
                       </div>
+                      <Badge variant={task.analysisMode === 'deepseek' ? 'default' : 'secondary'}>
+                        {task.analysisMode === 'deepseek' ? 'AI分析' : '传统算法'}
+                      </Badge>
                     </div>
-                    {task.status === 'completed' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setLocation(`/results/${task.id}`)}
-                      >
-                        查看报告
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {task.status === 'completed' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setLocation(`/results/${task.id}`)}
+                        >
+                          查看详情
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -581,42 +692,38 @@ export default function Dashboard() {
       </div>
 
       {/* 删除确认对话框 */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>确认删除</DialogTitle>
-            <DialogDescription>
-              删除文档后，所有使用该文档的分析任务和结果也将被删除。此操作不可恢复，确定要继续吗？
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-              取消
-            </Button>
-            <Button
-              variant="destructive"
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              您确定要删除这个文档吗？此操作无法撤销。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
               onClick={() => {
                 if (documentToDelete) {
                   deleteDocumentMutation.mutate({ documentId: documentToDelete });
                 }
               }}
-              disabled={deleteDocumentMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteDocumentMutation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : null}
-              {deleteDocumentMutation.isPending ? "删除中..." : "确认删除"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* 文档预览对话框 */}
-      <DocumentPreviewDialog
-        open={previewDialogOpen}
-        onOpenChange={setPreviewDialogOpen}
-        document={documentToPreview}
-      />
+      {documentToPreview && (
+        <DocumentPreviewDialog
+          document={documentToPreview}
+          open={previewDialogOpen}
+          onOpenChange={setPreviewDialogOpen}
+        />
+      )}
     </div>
   );
 }

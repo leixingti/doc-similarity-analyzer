@@ -21,15 +21,21 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, FileText, History, GitCompare, Grid3x3, Settings } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: History, label: "历史记录", path: "/history" },
+  { icon: GitCompare, label: "版本对比", path: "/version-comparison" },
+  { icon: Grid3x3, label: "批量对比", path: "/batch-comparison" },
+];
+
+const adminMenuItems = [
+  { icon: Users, label: "用户管理", path: "/user-management" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -199,6 +205,35 @@ function DashboardLayoutContent({
                 );
               })}
             </SidebarMenu>
+            {user?.role === 'admin' && (
+              <>
+                <div className="px-4 py-2 mt-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    管理员
+                  </div>
+                </div>
+                <SidebarMenu className="px-2 py-1">
+                  {adminMenuItems.map(item => {
+                    const isActive = location === item.path;
+                    return (
+                      <SidebarMenuItem key={item.path}>
+                        <SidebarMenuButton
+                          isActive={isActive}
+                          onClick={() => setLocation(item.path)}
+                          tooltip={item.label}
+                          className={`h-10 transition-all font-normal`}
+                        >
+                          <item.icon
+                            className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                          />
+                          <span>{item.label}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </>
+            )}
           </SidebarContent>
 
           <SidebarFooter className="p-3">
