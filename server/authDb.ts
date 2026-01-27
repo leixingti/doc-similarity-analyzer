@@ -8,8 +8,8 @@ import bcrypt from "bcrypt";
  */
 export async function getUserByEmail(email: string) {
   const db = await getDb();
-  const [user] = await db!.select().from(users).where(eq(users.email, email));
-  return user || null;
+  const result = await db!.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }
 
 /**
@@ -23,7 +23,7 @@ export async function createUser(data: {
   const hashedPassword = await bcrypt.hash(data.password, 10);
   
   const db = await getDb();
-  const [result] = await db!.insert(users).values({
+  const result = await db!.insert(users).values({
     email: data.email,
     password: hashedPassword,
     name: data.name || data.email.split('@')[0],
@@ -32,7 +32,7 @@ export async function createUser(data: {
     role: "user",
   });
   
-  return result.insertId;
+  return Number(result[0].insertId);
 }
 
 /**
@@ -62,7 +62,7 @@ export async function createEmailVerification(email: string, code: string): Prom
  */
 export async function verifyEmailCode(email: string, code: string): Promise<boolean> {
   const db = await getDb();
-  const [verification] = await db!
+  const verifications = await db!
     .select()
     .from(emailVerifications)
     .where(
@@ -75,6 +75,8 @@ export async function verifyEmailCode(email: string, code: string): Promise<bool
     )
     .orderBy(emailVerifications.createdAt)
     .limit(1);
+  
+  const verification = verifications.length > 0 ? verifications[0] : null;
   
   if (!verification) {
     return false;
