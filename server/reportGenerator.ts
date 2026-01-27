@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, rgb } from 'pdf-lib';
+import { PDFDocument, PDFPage, rgb, StandardFonts } from 'pdf-lib';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -9,21 +9,24 @@ export interface ReportData {
   overallSimilarity: number;
   summary: string;
   details: {
-    semanticSimilarity: number;
-    structuralSimilarity: number;
-    styleSimilarity: number;
-    topicSimilarity: number;
-    toneSimilarity: number;
-    vocabularySimilarity: number;
+    semanticSimilarity?: number;
+    structuralSimilarity?: number;
+    styleSimilarity?: number;
+    topicSimilarity?: number;
+    toneSimilarity?: number;
+    vocabularySimilarity?: number;
+    cosineSimilarity?: number;
+    jaccardSimilarity?: number;
+    tfidfSimilarity?: number;
   };
-  riskLevel: 'high' | 'medium' | 'low';
-  riskDescription: string;
-  recommendations: string[];
+  riskLevel?: 'high' | 'medium' | 'low';
+  riskDescription?: string;
+  recommendations?: string[];
   segments: Array<{
     doc1Segment: string;
     doc2Segment: string;
     similarity: number;
-    reason: string;
+    reason?: string;
   }>;
   documents: Array<{
     filename: string;
@@ -33,247 +36,478 @@ export interface ReportData {
 }
 
 /**
- * 生成 PDF 报告
+ * 生成 PDF 报告 - 完整版
  */
 export async function generatePDFReport(reportData: ReportData): Promise<Buffer> {
-  const pdfDoc = PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 纸张大小
-  const { height } = page.getSize();
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
-  let yPosition = height - 40;
-  const margin = 40;
-  const pageWidth = 595 - margin * 2;
+  const margin = 50;
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const contentWidth = pageWidth - margin * 2;
   
-  // 标题
-  page.drawText('文档相似度分析报告', {
-    x: margin,
-    y: yPosition,
-    size: 24,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= 40;
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  let yPosition = pageHeight - margin;
   
-  // 任务信息
-  page.drawText('任务信息', {
-    x: margin,
-    y: yPosition,
-    size: 14,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= 25;
+  // 辅助函数：检查是否需要新页面
+  const checkNewPage = (requiredSpace: number) => {
+    if (yPosition - requiredSpace < margin) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      yPosition = pageHeight - margin;
+      return true;
+    }
+    return false;
+  };
   
-  const taskInfo = [
-    `任务名称: ${reportData.taskName}`,
-    `创建时间: ${reportData.createdAt}`,
-    `分析模式: ${reportData.analysisMode}`,
-  ];
-  
-  for (const info of taskInfo) {
-    page.drawText(info, {
-      x: margin + 20,
+  // 辅助函数：绘制标题
+  const drawTitle = (text: string, size: number = 24) => {
+    currentPage.drawText(text, {
+      x: margin,
       y: yPosition,
-      size: 10,
-      color: rgb(50, 50, 50),
+      size,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    yPosition -= size + 15;
+  };
+  
+  // 辅助函数：绘制副标题
+  const drawSubtitle = (text: string, size: number = 14) => {
+    checkNewPage(30);
+    currentPage.drawText(text, {
+      x: margin,
+      y: yPosition,
+      size,
+      font: boldFont,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    yPosition -= size + 10;
+  };
+  
+  // 辅助函数：绘制文本
+  const drawText = (text: string, size: number = 10, indent: number = 0, color = rgb(0.4, 0.4, 0.4)) => {
+    const lines = wrapText(text, contentWidth - indent, size);
+    for (const line of lines) {
+      checkNewPage(15);
+      currentPage.drawText(line, {
+        x: margin + indent,
+        y: yPosition,
+        size,
+        font,
+        color,
+      });
+      yPosition -= size + 5;
+    }
+  };
+  
+  // 辅助函数：绘制分隔线
+  const drawLine = () => {
+    checkNewPage(10);
+    currentPage.drawLine({
+      start: { x: margin, y: yPosition },
+      end: { x: pageWidth - margin, y: yPosition },
+      thickness: 0.5,
+      color: rgb(0.8, 0.8, 0.8),
     });
     yPosition -= 15;
-  }
+  };
+  
+  // ===== 第一页：封面和概览 =====
+  
+  // 主标题
+  drawTitle('文档相似度分析报告', 28);
+  yPosition -= 10;
+  
+  // 任务信息卡片
+  checkNewPage(120);
+  currentPage.drawRectangle({
+    x: margin,
+    y: yPosition - 100,
+    width: contentWidth,
+    height: 100,
+    borderColor: rgb(0.9, 0.9, 0.9),
+    borderWidth: 1,
+    color: rgb(0.98, 0.98, 0.98),
+  });
   
   yPosition -= 15;
+  drawText(`任务名称: ${reportData.taskName}`, 11, 10, rgb(0.2, 0.2, 0.2));
+  drawText(`创建时间: ${reportData.createdAt}`, 10, 10);
+  drawText(`分析模式: ${reportData.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'}`, 10, 10);
+  yPosition -= 10;
   
-  // 分析概览
-  page.drawText('分析概览', {
+  // 整体相似度（大字体突出显示）
+  yPosition -= 20;
+  drawSubtitle('整体相似度');
+  
+  checkNewPage(80);
+  const similarityColor = reportData.overallSimilarity >= 80 ? rgb(0.9, 0.2, 0.2) : 
+                         reportData.overallSimilarity >= 50 ? rgb(0.9, 0.6, 0) : 
+                         rgb(0.2, 0.7, 0.2);
+  
+  currentPage.drawRectangle({
     x: margin,
-    y: yPosition,
-    size: 14,
-    color: rgb(0, 0, 0),
+    y: yPosition - 60,
+    width: contentWidth,
+    height: 60,
+    color: rgb(similarityColor.red * 0.1 + 0.9, similarityColor.green * 0.1 + 0.9, similarityColor.blue * 0.1 + 0.9),
+    borderColor: similarityColor,
+    borderWidth: 2,
   });
-  yPosition -= 25;
   
-  // 相似度百分比（大字体）
-  const similarityColor = reportData.overallSimilarity > 80 ? rgb(255, 0, 0) : 
-                         reportData.overallSimilarity > 50 ? rgb(255, 165, 0) : 
-                         rgb(0, 128, 0);
-  
-  page.drawText(`整体相似度: ${reportData.overallSimilarity}%`, {
+  currentPage.drawText(`${reportData.overallSimilarity.toFixed(1)}%`, {
     x: margin + 20,
-    y: yPosition,
-    size: 20,
+    y: yPosition - 45,
+    size: 36,
+    font: boldFont,
     color: similarityColor,
   });
-  yPosition -= 30;
+  
+  const riskText = reportData.overallSimilarity >= 80 ? '高度相似' : 
+                   reportData.overallSimilarity >= 50 ? '中度相似' : 
+                   '低度相似';
+  currentPage.drawText(riskText, {
+    x: margin + 150,
+    y: yPosition - 40,
+    size: 14,
+    font: boldFont,
+    color: similarityColor,
+  });
+  
+  yPosition -= 75;
   
   // 分析摘要
-  page.drawText('分析摘要:', {
-    x: margin + 20,
-    y: yPosition,
-    size: 10,
-    color: rgb(50, 50, 50),
-  });
-  yPosition -= 15;
-  
-  const summaryLines = wrapText(reportData.summary, pageWidth - 40, 10);
-  for (const line of summaryLines) {
-    page.drawText(line, {
-      x: margin + 30,
-      y: yPosition,
-      size: 9,
-      color: rgb(80, 80, 80),
-    });
-    yPosition -= 12;
-  }
-  
+  drawSubtitle('分析摘要');
+  drawText(reportData.summary, 10, 10);
   yPosition -= 10;
   
-  // 详细分析
-  page.drawText('详细分析', {
-    x: margin,
-    y: yPosition,
-    size: 14,
-    color: rgb(0, 0, 0),
-  });
-  yPosition -= 25;
+  // ===== 详细指标 =====
   
-  const details = [
-    `语义相似度: ${reportData.details.semanticSimilarity}%`,
-    `结构相似度: ${reportData.details.structuralSimilarity}%`,
-    `风格相似度: ${reportData.details.styleSimilarity}%`,
-    `主题相似度: ${reportData.details.topicSimilarity}%`,
-    `语气相似度: ${reportData.details.toneSimilarity}%`,
-    `词汇相似度: ${reportData.details.vocabularySimilarity}%`,
-  ];
+  drawSubtitle('详细指标');
   
-  for (const detail of details) {
-    page.drawText(detail, {
-      x: margin + 20,
-      y: yPosition,
-      size: 10,
-      color: rgb(50, 50, 50),
-    });
-    yPosition -= 15;
+  checkNewPage(150);
+  
+  // 绘制指标表格
+  const metrics = [];
+  if (reportData.details.cosineSimilarity !== undefined) {
+    // 传统算法指标
+    metrics.push(
+      { name: '余弦相似度', value: reportData.details.cosineSimilarity },
+      { name: 'Jaccard相似度', value: reportData.details.jaccardSimilarity },
+      { name: 'TF-IDF相似度', value: reportData.details.tfidfSimilarity }
+    );
+  } else {
+    // DeepSeek AI指标
+    metrics.push(
+      { name: '语义相似度', value: reportData.details.semanticSimilarity },
+      { name: '结构相似度', value: reportData.details.structuralSimilarity },
+      { name: '风格相似度', value: reportData.details.styleSimilarity },
+      { name: '主题相似度', value: reportData.details.topicSimilarity },
+      { name: '语气相似度', value: reportData.details.toneSimilarity },
+      { name: '词汇相似度', value: reportData.details.vocabularySimilarity }
+    );
   }
   
-  yPosition -= 10;
-  
-  // 风险等级
-  page.drawText(`风险等级: ${reportData.riskLevel.toUpperCase()}`, {
-    x: margin + 20,
-    y: yPosition,
-    size: 10,
-    color: reportData.riskLevel === 'high' ? rgb(255, 0, 0) : 
-           reportData.riskLevel === 'medium' ? rgb(255, 165, 0) : 
-           rgb(0, 128, 0),
-  });
-  yPosition -= 15;
-  
-  // 风险说明
-  const riskLines = wrapText(reportData.riskDescription, pageWidth - 40, 10);
-  for (const line of riskLines) {
-    page.drawText(line, {
-      x: margin + 30,
-      y: yPosition,
-      size: 9,
-      color: rgb(80, 80, 80),
-    });
-    yPosition -= 12;
-  }
-  
-  yPosition -= 10;
-  
-  // 相似片段
-  if (reportData.segments.length > 0) {
-    page.drawText('相似片段', {
-      x: margin,
-      y: yPosition,
-      size: 14,
-      color: rgb(0, 0, 0),
-    });
-    yPosition -= 25;
-    
-    for (let i = 0; i < Math.min(3, reportData.segments.length); i++) {
-      const segment = reportData.segments[i];
+  for (const metric of metrics) {
+    if (metric.value !== undefined) {
+      checkNewPage(25);
+      const barWidth = (metric.value / 100) * (contentWidth - 150);
+      const barColor = metric.value >= 80 ? rgb(0.9, 0.2, 0.2) : 
+                       metric.value >= 50 ? rgb(0.9, 0.6, 0) : 
+                       rgb(0.2, 0.7, 0.2);
       
-      page.drawText(`片段 ${i + 1}:`, {
-        x: margin + 20,
+      // 指标名称
+      currentPage.drawText(metric.name, {
+        x: margin + 10,
         y: yPosition,
         size: 10,
-        color: rgb(0, 0, 128),
+        font,
+        color: rgb(0.3, 0.3, 0.3),
       });
-      yPosition -= 15;
       
-      const doc1Lines = wrapText(`文档A: ${segment.doc1Segment}`, pageWidth - 60, 9);
-      for (const line of doc1Lines) {
-        page.drawText(line, {
-          x: margin + 30,
-          y: yPosition,
-          size: 8,
-          color: rgb(80, 80, 80),
-        });
-        yPosition -= 11;
-      }
+      // 进度条背景
+      currentPage.drawRectangle({
+        x: margin + 120,
+        y: yPosition - 3,
+        width: contentWidth - 150,
+        height: 12,
+        color: rgb(0.95, 0.95, 0.95),
+      });
       
-      const doc2Lines = wrapText(`文档B: ${segment.doc2Segment}`, pageWidth - 60, 9);
-      for (const line of doc2Lines) {
-        page.drawText(line, {
-          x: margin + 30,
-          y: yPosition,
-          size: 8,
-          color: rgb(80, 80, 80),
-        });
-        yPosition -= 11;
-      }
+      // 进度条
+      currentPage.drawRectangle({
+        x: margin + 120,
+        y: yPosition - 3,
+        width: barWidth,
+        height: 12,
+        color: barColor,
+      });
       
-      page.drawText(`相似度: ${segment.similarity}% | 原因: ${segment.reason}`, {
-        x: margin + 30,
+      // 百分比
+      currentPage.drawText(`${metric.value.toFixed(1)}%`, {
+        x: margin + 120 + contentWidth - 140,
         y: yPosition,
-        size: 8,
-        color: rgb(100, 100, 100),
+        size: 9,
+        font: boldFont,
+        color: rgb(0.3, 0.3, 0.3),
       });
-      yPosition -= 15;
       
-      if (yPosition < 100) {
-        const newPage = pdfDoc.addPage([595, 842]);
-        yPosition = 842 - 40;
-      }
+      yPosition -= 20;
     }
   }
   
-  // 改进建议
-  if (reportData.recommendations.length > 0) {
-    if (yPosition < 150) {
-      const newPage = pdfDoc.addPage([595, 842]);
-      yPosition = 842 - 40;
-    }
+  yPosition -= 10;
+  
+  // 风险评估（如果有）
+  if (reportData.riskLevel && reportData.riskDescription) {
+    drawSubtitle('风险评估');
     
-    page.drawText('改进建议', {
-      x: margin,
+    const riskColor = reportData.riskLevel === 'high' ? rgb(0.9, 0.2, 0.2) : 
+                      reportData.riskLevel === 'medium' ? rgb(0.9, 0.6, 0) : 
+                      rgb(0.2, 0.7, 0.2);
+    
+    const riskLevelText = reportData.riskLevel === 'high' ? '高风险' : 
+                          reportData.riskLevel === 'medium' ? '中风险' : 
+                          '低风险';
+    
+    checkNewPage(30);
+    currentPage.drawText(`风险等级: ${riskLevelText}`, {
+      x: margin + 10,
       y: yPosition,
-      size: 14,
-      color: rgb(0, 0, 0),
+      size: 11,
+      font: boldFont,
+      color: riskColor,
     });
-    yPosition -= 25;
+    yPosition -= 20;
     
-    for (const recommendation of reportData.recommendations) {
-      const recLines = wrapText(`• ${recommendation}`, pageWidth - 40, 10);
-      for (const line of recLines) {
-        page.drawText(line, {
-          x: margin + 20,
+    drawText(reportData.riskDescription, 10, 10);
+    yPosition -= 10;
+  }
+  
+  // ===== 相似片段 =====
+  
+  if (reportData.segments && reportData.segments.length > 0) {
+    checkNewPage(50);
+    drawSubtitle('相似片段');
+    drawText(`共发现 ${reportData.segments.length} 个相似片段，以下展示详细内容:`, 10, 10);
+    yPosition -= 10;
+    
+    for (let i = 0; i < reportData.segments.length; i++) {
+      const segment = reportData.segments[i];
+      
+      checkNewPage(120);
+      
+      // 片段标题
+      currentPage.drawRectangle({
+        x: margin,
+        y: yPosition - 15,
+        width: contentWidth,
+        height: 20,
+        color: rgb(0.95, 0.95, 0.95),
+      });
+      
+      currentPage.drawText(`片段 ${i + 1}`, {
+        x: margin + 10,
+        y: yPosition - 12,
+        size: 11,
+        font: boldFont,
+        color: rgb(0.2, 0.4, 0.7),
+      });
+      
+      currentPage.drawText(`相似度: ${segment.similarity.toFixed(1)}%`, {
+        x: pageWidth - margin - 100,
+        y: yPosition - 12,
+        size: 10,
+        font: boldFont,
+        color: rgb(0.9, 0.2, 0.2),
+      });
+      
+      yPosition -= 25;
+      
+      // 文档A内容
+      currentPage.drawText('文档A:', {
+        x: margin + 10,
+        y: yPosition,
+        size: 9,
+        font: boldFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      yPosition -= 12;
+      
+      drawText(segment.doc1Segment, 9, 20, rgb(0.4, 0.4, 0.4));
+      yPosition -= 5;
+      
+      // 文档B内容
+      checkNewPage(50);
+      currentPage.drawText('文档B:', {
+        x: margin + 10,
+        y: yPosition,
+        size: 9,
+        font: boldFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      yPosition -= 12;
+      
+      drawText(segment.doc2Segment, 9, 20, rgb(0.4, 0.4, 0.4));
+      
+      // 原因（如果有）
+      if (segment.reason) {
+        yPosition -= 5;
+        checkNewPage(20);
+        currentPage.drawText(`相似原因: ${segment.reason}`, {
+          x: margin + 10,
           y: yPosition,
-          size: 9,
-          color: rgb(80, 80, 80),
+          size: 8,
+          font,
+          color: rgb(0.5, 0.5, 0.5),
         });
         yPosition -= 12;
+      }
+      
+      yPosition -= 15;
+      drawLine();
+    }
+  }
+  
+  // ===== 文档列表 =====
+  
+  if (reportData.documents && reportData.documents.length > 0) {
+    checkNewPage(100);
+    drawSubtitle('文档列表');
+    
+    // 表头
+    checkNewPage(80);
+    currentPage.drawRectangle({
+      x: margin,
+      y: yPosition - 18,
+      width: contentWidth,
+      height: 20,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+    
+    currentPage.drawText('文件名', {
+      x: margin + 10,
+      y: yPosition - 14,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    currentPage.drawText('类型', {
+      x: margin + 300,
+      y: yPosition - 14,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    currentPage.drawText('大小', {
+      x: margin + 400,
+      y: yPosition - 14,
+      size: 10,
+      font: boldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    yPosition -= 25;
+    
+    // 表格内容
+    for (const doc of reportData.documents) {
+      checkNewPage(25);
+      
+      const filename = doc.filename.length > 35 ? doc.filename.substring(0, 32) + '...' : doc.filename;
+      currentPage.drawText(filename, {
+        x: margin + 10,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      
+      currentPage.drawText(doc.fileType.toUpperCase(), {
+        x: margin + 300,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      
+      const sizeKB = (doc.fileSize / 1024).toFixed(1);
+      currentPage.drawText(`${sizeKB} KB`, {
+        x: margin + 400,
+        y: yPosition,
+        size: 9,
+        font,
+        color: rgb(0.4, 0.4, 0.4),
+      });
+      
+      yPosition -= 18;
+    }
+    
+    yPosition -= 10;
+  }
+  
+  // ===== 改进建议 =====
+  
+  if (reportData.recommendations && reportData.recommendations.length > 0) {
+    checkNewPage(100);
+    drawSubtitle('改进建议');
+    
+    for (let i = 0; i < reportData.recommendations.length; i++) {
+      checkNewPage(30);
+      const bullet = `${i + 1}. `;
+      currentPage.drawText(bullet, {
+        x: margin + 10,
+        y: yPosition,
+        size: 10,
+        font: boldFont,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      
+      const lines = wrapText(reportData.recommendations[i], contentWidth - 40, 10);
+      for (let j = 0; j < lines.length; j++) {
+        if (j > 0) checkNewPage(15);
+        currentPage.drawText(lines[j], {
+          x: margin + (j === 0 ? 30 : 20),
+          y: yPosition,
+          size: 10,
+          font,
+          color: rgb(0.4, 0.4, 0.4),
+        });
+        yPosition -= 15;
       }
       yPosition -= 5;
     }
   }
   
-  // 页脚
-  page.drawText(`生成时间: ${new Date().toLocaleString('zh-CN')}`, {
-    x: margin,
-    y: 20,
-    size: 8,
-    color: rgb(150, 150, 150),
-  });
+  // ===== 页脚 =====
+  
+  const pages = pdfDoc.getPages();
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    
+    // 页码
+    page.drawText(`第 ${i + 1} 页 / 共 ${pages.length} 页`, {
+      x: pageWidth / 2 - 40,
+      y: 20,
+      size: 8,
+      font,
+      color: rgb(0.6, 0.6, 0.6),
+    });
+    
+    // 生成时间（只在第一页）
+    if (i === 0) {
+      page.drawText(`生成时间: ${new Date().toLocaleString('zh-CN')}`, {
+        x: margin,
+        y: 20,
+        size: 8,
+        font,
+        color: rgb(0.6, 0.6, 0.6),
+      });
+    }
+  }
   
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
@@ -284,16 +518,19 @@ export async function generatePDFReport(reportData: ReportData): Promise<Buffer>
  */
 function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
   const lines: string[] = [];
-  const words = text.split('');
+  const chars = text.split('');
   let currentLine = '';
   
-  for (const char of words) {
+  for (const char of chars) {
     const testLine = currentLine + char;
-    // 简单的字符宽度估算
-    const estimatedWidth = testLine.length * (fontSize * 0.5);
+    // 中文字符宽度约为fontSize，英文约为fontSize * 0.5
+    const charWidth = /[\u4e00-\u9fa5]/.test(char) ? fontSize : fontSize * 0.5;
+    const estimatedWidth = currentLine.split('').reduce((sum, c) => {
+      return sum + (/[\u4e00-\u9fa5]/.test(c) ? fontSize : fontSize * 0.5);
+    }, 0) + charWidth;
     
-    if (estimatedWidth > maxWidth) {
-      if (currentLine) lines.push(currentLine);
+    if (estimatedWidth > maxWidth && currentLine.length > 0) {
+      lines.push(currentLine);
       currentLine = char;
     } else {
       currentLine = testLine;
@@ -314,48 +551,82 @@ export function generateMarkdownReport(reportData: ReportData): string {
 
 | 任务名称 | 创建时间 | 分析模式 |
 |---|---|---|
-| ${reportData.taskName} | ${reportData.createdAt} | ${reportData.analysisMode} |
+| ${reportData.taskName} | ${reportData.createdAt} | ${reportData.analysisMode === 'traditional' ? '传统算法' : 'DeepSeek AI'} |
 
 ## 分析概览
 
 ### 整体相似度
 
-# ${reportData.overallSimilarity}%
+# ${reportData.overallSimilarity.toFixed(1)}%
 
 ### 分析摘要
 
 ${reportData.summary}
 
-## 详细分析
+## 详细指标
 
-| 维度 | 相似度 (%) |
+`;
+
+  // 根据分析模式显示不同的指标
+  if (reportData.details.cosineSimilarity !== undefined) {
+    markdown += `| 维度 | 相似度 (%) |
 |---|---|
-| 语义相似度 | ${reportData.details.semanticSimilarity} |
-| 结构相似度 | ${reportData.details.structuralSimilarity} |
-| 风格相似度 | ${reportData.details.styleSimilarity} |
-| 主题相似度 | ${reportData.details.topicSimilarity} |
-| 语气相似度 | ${reportData.details.toneSimilarity} |
-| 词汇相似度 | ${reportData.details.vocabularySimilarity} |
+| 余弦相似度 | ${reportData.details.cosineSimilarity.toFixed(1)} |
+| Jaccard相似度 | ${reportData.details.jaccardSimilarity?.toFixed(1)} |
+| TF-IDF相似度 | ${reportData.details.tfidfSimilarity?.toFixed(1)} |
+`;
+  } else {
+    markdown += `| 维度 | 相似度 (%) |
+|---|---|
+| 语义相似度 | ${reportData.details.semanticSimilarity?.toFixed(1)} |
+| 结构相似度 | ${reportData.details.structuralSimilarity?.toFixed(1)} |
+| 风格相似度 | ${reportData.details.styleSimilarity?.toFixed(1)} |
+| 主题相似度 | ${reportData.details.topicSimilarity?.toFixed(1)} |
+| 语气相似度 | ${reportData.details.toneSimilarity?.toFixed(1)} |
+| 词汇相似度 | ${reportData.details.vocabularySimilarity?.toFixed(1)} |
+`;
+  }
 
-**风险等级**: ${reportData.riskLevel}
+  if (reportData.riskLevel && reportData.riskDescription) {
+    markdown += `
+## 风险评估
+
+**风险等级**: ${reportData.riskLevel.toUpperCase()}
 
 **风险说明**: ${reportData.riskDescription}
+`;
+  }
 
+  markdown += `
 ## 相似片段
+
+共发现 ${reportData.segments.length} 个相似片段:
 
 `;
 
   for (let i = 0; i < reportData.segments.length; i++) {
     const segment = reportData.segments[i];
-    markdown += `### 片段 ${i + 1}
+    markdown += `### 片段 ${i + 1} (相似度: ${segment.similarity.toFixed(1)}%)
 
-**文档A**: ${segment.doc1Segment}
+**文档A**: 
+\`\`\`
+${segment.doc1Segment}
+\`\`\`
 
-**文档B**: ${segment.doc2Segment}
+**文档B**: 
+\`\`\`
+${segment.doc2Segment}
+\`\`\`
+`;
 
-**相似度**: ${segment.similarity}%
+    if (segment.reason) {
+      markdown += `
+**相似原因**: ${segment.reason}
+`;
+    }
 
-**原因**: ${segment.reason}
+    markdown += `
+---
 
 `;
   }
@@ -367,24 +638,27 @@ ${reportData.summary}
 `;
 
   for (const doc of reportData.documents) {
-    markdown += `| ${doc.filename} | ${doc.fileType} | ${doc.fileSize} |
+    const sizeKB = (doc.fileSize / 1024).toFixed(1);
+    markdown += `| ${doc.filename} | ${doc.fileType.toUpperCase()} | ${sizeKB} |
 `;
   }
 
-  markdown += `
+  if (reportData.recommendations && reportData.recommendations.length > 0) {
+    markdown += `
 ## 改进建议
 
 `;
 
-  for (const recommendation of reportData.recommendations) {
-    markdown += `- ${recommendation}
+    for (const recommendation of reportData.recommendations) {
+      markdown += `- ${recommendation}
 `;
+    }
   }
 
   markdown += `
 ---
 
-生成时间: ${new Date().toLocaleString('zh-CN')}
+**生成时间**: ${new Date().toLocaleString('zh-CN')}
 `;
 
   return markdown;
