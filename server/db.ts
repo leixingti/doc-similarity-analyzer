@@ -30,19 +30,30 @@ export async function getDb() {
         connectionLimit: 10,
         enableKeepAlive: true,
         keepAliveInitialDelay: 10000,
+        waitForConnections: true,
+        queueLimit: 0,
+        connectTimeout: 60000,
       });
+      
+      // 测试连接
+      try {
+        const connection = await pool.getConnection();
+        console.log('[Database] Connection test successful');
+        connection.release();
+      } catch (testError) {
+        console.error('[Database] Connection test failed:', testError);
+        throw testError;
+      }
       
       _db = drizzle(pool);
       console.log('[Database] Drizzle initialized with SSL');
     } catch (error) {
       console.error("[Database] Failed to initialize database:", error);
       _db = null;
+      throw error;
     }
   }
   
-  if (!_db) {
-    throw new Error("Database not initialized");
-  }
   return _db;
 }
 

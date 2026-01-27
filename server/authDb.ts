@@ -7,9 +7,19 @@ import bcrypt from "bcrypt";
  * 根据邮箱查找用户
  */
 export async function getUserByEmail(email: string) {
-  const db = await getDb();
-  const result = await db!.select().from(users).where(eq(users.email, email)).limit(1);
-  return result.length > 0 ? result[0] : null;
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.error('[authDb] Database not available');
+      return null;
+    }
+    
+    const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('[authDb] Error in getUserByEmail:', error);
+    throw error;
+  }
 }
 
 /**
@@ -20,19 +30,28 @@ export async function createUser(data: {
   password: string;
   name?: string;
 }): Promise<number> {
-  const hashedPassword = await bcrypt.hash(data.password, 10);
-  
-  const db = await getDb();
-  const result = await db!.insert(users).values({
-    email: data.email,
-    password: hashedPassword,
-    name: data.name || data.email.split('@')[0],
-    loginMethod: "email",
-    emailVerified: false,
-    role: "user",
-  });
-  
-  return Number(result[0].insertId);
+  try {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    
+    const db = await getDb();
+    if (!db) {
+      throw new Error('Database not available');
+    }
+    
+    const result = await db.insert(users).values({
+      email: data.email,
+      password: hashedPassword,
+      name: data.name || data.email.split('@')[0],
+      loginMethod: "email",
+      emailVerified: false,
+      role: "user",
+    });
+    
+    return Number(result[0].insertId);
+  } catch (error) {
+    console.error('[authDb] Error in createUser:', error);
+    throw error;
+  }
 }
 
 /**
