@@ -14,32 +14,9 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
   if (!_db) {
-    // Force use of TiDB Serverless connection string to bypass Railway env var issues
     const dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
-    console.log('[Database] Forcing connection to TiDB Serverless');
-
+    
     try {
-      console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
-      
-      // Use mysql2 directly to test connection with SSL
-      const connection = await mysql.createConnection({
-        host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
-        port: 4000,
-        user: '2SDxeZiTrYjeW97.root',
-        password: 'E8io4SjtjPyWNHLA',
-        database: 'test',
-        ssl: {
-          minVersion: 'TLSv1.2',
-          rejectUnauthorized: false
-        }
-      });
-      console.log('[Database] mysql2 connection successful');
-      
-      const [rows] = await connection.execute('SELECT 1 as ok');
-      console.log('[Database] mysql2 test query successful:', rows);
-      
-      await connection.end();
-
       const pool = mysql.createPool({
         host: 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
         port: 4000,
@@ -51,22 +28,18 @@ export async function getDb() {
           rejectUnauthorized: false
         },
         connectionLimit: 10,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 10000,
       });
-      _db = drizzle(pool);
-      console.log('[Database] Drizzle initialized with pool and SSL');
       
-      // Test Drizzle query
-      try {
-        const testResult = await _db.execute(sql`SELECT 1 as ok`);
-        console.log('[Database] Drizzle test query successful:', testResult);
-      } catch (err) {
-        console.error('[Database] Drizzle test query failed:', err);
-      }
+      _db = drizzle(pool);
+      console.log('[Database] Drizzle initialized with SSL');
     } catch (error) {
-      console.error("[Database] Failed to connect:", error);
+      console.error("[Database] Failed to initialize database:", error);
       _db = null;
     }
   }
+  
   if (!_db) {
     throw new Error("Database not initialized");
   }
