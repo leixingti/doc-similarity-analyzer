@@ -27,6 +27,12 @@ export function getDb() {
       console.log('[Database] Constructed URL from Railway variables');
     }
     
+    // Fallback to TiDB Serverless if no other URL is found
+    if (!dbUrl) {
+      dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
+      console.log('[Database] Using TiDB Serverless fallback connection');
+    }
+    
     if (dbUrl) {
       try {
         console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
