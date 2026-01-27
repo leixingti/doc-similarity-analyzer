@@ -22,6 +22,14 @@
     "LOG_LEVEL": {
       "description": "Logging level",
       "value": "info"
+    },
+    "DATABASE_URL": {
+      "description": "MySQL database connection URL (auto-provided by Railway MySQL service)",
+      "reference": "MYSQL_URL"
+    },
+    "HOST": {
+      "description": "Server host address",
+      "value": "0.0.0.0"
     }
   }
 }
