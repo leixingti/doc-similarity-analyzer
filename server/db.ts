@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+'''import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users,
@@ -13,35 +13,17 @@ let _db: ReturnType<typeof drizzle> | null = null;
 
 export function getDb() {
   if (!_db) {
-    let dbUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
-    
-    // If no direct URL, try to construct from individual Railway variables
-    if (!dbUrl && process.env.MYSQL_HOST) {
-      const host = process.env.MYSQL_HOST || 'localhost';
-      const port = process.env.MYSQL_PORT || '3306';
-      const user = process.env.MYSQL_USER || 'root';
-      const password = process.env.MYSQL_PASSWORD || '';
-      const database = process.env.MYSQL_DATABASE || 'railway';
-      
-      dbUrl = `mysql://${user}:${password}@${host}:${port}/${database}`;
-      console.log('[Database] Constructed URL from Railway variables');
-    }
-    
-    // Fallback to TiDB Serverless if no other URL is found
-    if (!dbUrl) {
-      dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
-      console.log('[Database] Using TiDB Serverless fallback connection');
-    }
-    
-    if (dbUrl) {
-      try {
-        console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
-        _db = drizzle(dbUrl);
-        console.log('[Database] Successfully connected');
-      } catch (error) {
-        console.warn("[Database] Failed to connect:", error);
-        _db = null;
-      }
+    // Force use of TiDB Serverless connection string to bypass Railway env var issues
+    const dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
+    console.log('[Database] Forcing connection to TiDB Serverless');
+
+    try {
+      console.log('[Database] Attempting to connect with URL:', dbUrl.replace(/:[^:]*@/, ':***@'));
+      _db = drizzle(dbUrl);
+      console.log('[Database] Successfully connected');
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
     }
   }
   if (!_db) {
@@ -357,3 +339,4 @@ export async function deleteAnalysisTask(taskId: number) {
   await db.delete(analysisTasks)
     .where(eq(analysisTasks.id, taskId));
 }
+'''
