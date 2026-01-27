@@ -42,7 +42,7 @@ const getPoolConfig = () => {
   const isDevelopment = process.env.NODE_ENV === "development";
   const isProduction = process.env.NODE_ENV === "production";
 
-  // 优先使用 DATABASE_URL
+  // 优先使用 DATABASE_URL，其次使用 MYSQL_URL（Railway 自动生成）
   let dbConfig = {
     host: "localhost",
     user: "root",
@@ -51,13 +51,17 @@ const getPoolConfig = () => {
     port: 3306,
   };
 
-  if (process.env.DATABASE_URL) {
+  // 尝试 DATABASE_URL
+  const databaseUrl = process.env.DATABASE_URL || process.env.MYSQL_URL;
+  if (databaseUrl) {
     try {
-      dbConfig = parseDatabaseUrl(process.env.DATABASE_URL);
+      console.log("[Database] Using connection string from environment");
+      dbConfig = parseDatabaseUrl(databaseUrl);
     } catch (error) {
-      console.warn("Failed to parse DATABASE_URL, using individual env vars");
+      console.warn("[Database] Failed to parse DATABASE_URL/MYSQL_URL, using individual env vars");
     }
   } else {
+    console.log("[Database] No DATABASE_URL or MYSQL_URL found, using individual env vars");
     dbConfig = {
       host: process.env.DB_HOST || "localhost",
       user: process.env.DB_USER || "root",
