@@ -71,53 +71,70 @@ function buildAuthHeaders(apiKey: string): HeadersInit {
   return { Authorization: `Bearer ${apiKey}` };
 }
 
+// 本地存储辅助函数
+function saveToLocalStorage(relKey: string, data: Buffer | Uint8Array | string): { key: string; url: string } {
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
+  
+  const key = normalizeKey(relKey);
+  const filePath = path.join(STORAGE_DIR, key);
+  const dir = path.dirname(filePath);
+  
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
+  if (typeof data === 'string') {
+    fs.writeFileSync(filePath, data);
+  } else {
+    fs.writeFileSync(filePath, Buffer.from(data));
+  }
+  
+  return { key, url: `/storage/${key}` };
+}
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
 ): Promise<{ key: string; url: string }> {
+  // 如果配置为本地存储,直接使用
   if (USE_LOCAL_STORAGE) {
-    // 使用本地存储
-    if (!fs.existsSync(STORAGE_DIR)) {
-      fs.mkdirSync(STORAGE_DIR, { recursive: true });
-    }
-    
-    const key = normalizeKey(relKey);
-    const filePath = path.join(STORAGE_DIR, key);
-    const dir = path.dirname(filePath);
-    
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    if (typeof data === 'string') {
-      fs.writeFileSync(filePath, data);
-    } else {
-      fs.writeFileSync(filePath, Buffer.from(data));
-    }
-    
-    return { key, url: `/storage/${key}` };
+    console.log('[Storage] Using local storage');
+    return saveToLocalStorage(relKey, data);
   }
   
-  // 使用 Manus 存储
-  const { baseUrl, apiKey } = getStorageConfig();
-  const key = normalizeKey(relKey);
-  const uploadUrl = buildUploadUrl(baseUrl, key);
-  const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
-  const response = await fetch(uploadUrl, {
-    method: "POST",
-    headers: buildAuthHeaders(apiKey),
-    body: formData,
-  });
+  // 尝试使用 Manus 存储,失败则回退到本地存储
+  try {
+    const { baseUrl, apiKey } = getStorageConfig();
+    const key = normalizeKey(relKey);
+    const uploadUrl = buildUploadUrl(baseUrl, key);
+    const formData = toFormData(data, contentType, key.split("/").pop() ?? key);
+    
+    console.log('[Storage] Attempting Manus storage upload to:', uploadUrl.toString());
+    
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: buildAuthHeaders(apiKey),
+      body: formData,
+    });
 
-  if (!response.ok) {
-    const message = await response.text().catch(() => response.statusText);
-    throw new Error(
-      `Storage upload failed (${response.status} ${response.statusText}): ${message}`
-    );
+    if (!response.ok) {
+      const message = await response.text().catch(() => response.statusText);
+      console.error(`[Storage] Manus storage upload failed (${response.status}): ${message}`);
+      console.log('[Storage] Falling back to local storage');
+      return saveToLocalStorage(relKey, data);
+    }
+    
+    const url = (await response.json()).url;
+    console.log('[Storage] Manus storage upload successful');
+    return { key, url };
+  } catch (error) {
+    console.error('[Storage] Manus storage error:', error);
+    console.log('[Storage] Falling back to local storage');
+    return saveToLocalStorage(relKey, data);
   }
-  const url = (await response.json()).url;
-  return { key, url };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string; }> {

@@ -38,6 +38,9 @@ async function initializeApp() {
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   
+  // Serve local storage files
+  app.use('/storage', express.static(path.join(projectRoot, '.storage')));
+  
   // tRPC API
   app.use(
     "/api/trpc",
