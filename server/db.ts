@@ -30,7 +30,7 @@ export async function getDb() {
         database: 'test',
         ssl: {
           minVersion: 'TLSv1.2',
-          rejectUnauthorized: true
+          rejectUnauthorized: false
         }
       });
       console.log('[Database] mysql2 connection successful');
@@ -48,7 +48,7 @@ export async function getDb() {
         database: 'test',
         ssl: {
           minVersion: 'TLSv1.2',
-          rejectUnauthorized: true
+          rejectUnauthorized: false
         },
         connectionLimit: 10,
       });
