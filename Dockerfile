@@ -41,7 +41,6 @@ COPY --from=builder /app/node_modules ./node_modules
 
 # 从构建阶段复制构建输出
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/public ./public
 
 # 复制必要的文件
 COPY package.json ./
