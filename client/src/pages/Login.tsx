@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +16,31 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
   const utils = trpc.useUtils();
+
+  // 倒计时逻辑
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  const sendCodeMutation = trpc.userManagement.sendVerificationCode.useMutation({
+    onSuccess: () => {
+      setSuccess('验证码已发送到您的邮箱');
+      setCountdown(60);
+      setTimeout(() => setSuccess(''), 3000);
+    },
+    onError: (err) => {
+      setError(err.message || '验证码发送失败');
+    },
+  });
 
   const loginMutation = trpc.userManagement.login.useMutation({
     onSuccess: (data) => {
@@ -72,13 +94,44 @@ export default function Login() {
     loginMutation.mutate({ email, password });
   };
 
+  const handleSendCode = async () => {
+    setError('');
+    setSuccess('');
+    
+    if (!email) {
+      setError('请先输入邮箱地址');
+      return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('请输入有效的邮箱地址');
+      return;
+    }
+    
+    sendCodeMutation.mutate({ email });
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     if (!email || !password || !name) {
       setError('请填写所有必填项');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!verificationCode) {
+      setError('请输入验证码');
+      setIsLoading(false);
+      return;
+    }
+
+    if (verificationCode.length !== 6) {
+      setError('验证码必须是6位数字');
       setIsLoading(false);
       return;
     }
@@ -89,7 +142,7 @@ export default function Login() {
       return;
     }
 
-    registerMutation.mutate({ email, password, name });
+    registerMutation.mutate({ email, password, name, code: verificationCode });
   };
 
   const handleOAuthLogin = () => {
@@ -111,6 +164,12 @@ export default function Login() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {success && (
+            <Alert className="border-green-500 text-green-700">
+              <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
@@ -227,6 +286,30 @@ export default function Login() {
                       className="pl-10"
                       disabled={isLoading}
                     />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="register-verification-code">验证码</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="register-verification-code"
+                      type="text"
+                      placeholder="请输入6位验证码"
+                      value={verificationCode}
+                      onChange={(e) => setVerificationCode(e.target.value)}
+                      maxLength={6}
+                      disabled={isLoading}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSendCode}
+                      disabled={countdown > 0 || !email || isLoading}
+                      className="whitespace-nowrap"
+                    >
+                      {countdown > 0 ? `${countdown}s` : '发送验证码'}
+                    </Button>
                   </div>
                 </div>
 

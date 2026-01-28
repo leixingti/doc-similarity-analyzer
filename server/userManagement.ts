@@ -6,7 +6,10 @@ import {
   createUser,
   verifyPassword,
   generateVerificationCode,
+  createEmailVerification,
+  verifyEmailCode,
 } from "./authDb";
+import { sendVerificationEmail } from "./email";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -19,6 +22,35 @@ import { ENV } from "./_core/env";
  */
 export const userManagementRouter = router({
   /**
+   * 发送邮箱验证码
+   */
+  sendVerificationCode: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // 生成6位验证码
+      const code = generateVerificationCode();
+      
+      // 保存到数据库
+      await createEmailVerification(input.email, code);
+      
+      // 发送邮件
+      const sent = await sendVerificationEmail(input.email, code);
+      
+      if (!sent) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "验证码发送失败，请稍后重试",
+        });
+      }
+      
+      return { success: true, message: "验证码已发送到您的邮箱" };
+    }),
+
+  /**
    * 用户注册
    */
   register: publicProcedure
@@ -27,9 +59,19 @@ export const userManagementRouter = router({
         email: z.string().email(),
         name: z.string().min(1),
         password: z.string().min(6),
+        code: z.string().length(6),
       })
     )
     .mutation(async ({ input }) => {
+      // 验证验证码
+      const isCodeValid = await verifyEmailCode(input.email, input.code);
+      if (!isCodeValid) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "验证码错误或已过期",
+        });
+      }
+
       // 检查邮箱是否已存在
       const existing = await getUserByEmail(input.email);
       if (existing) {
