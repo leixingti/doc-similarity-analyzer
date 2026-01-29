@@ -5,11 +5,19 @@ import { ENV as env } from "./_core/env";
 const transporter = nodemailer.createTransport({
   host: env.SMTP_HOST,
   port: parseInt(env.SMTP_PORT || "587"),
-  secure: false, // true for 465, false for other ports
+  secure: false, // true for 465, false for other ports (587 uses STARTTLS)
   auth: {
     user: env.SMTP_USER,
     pass: env.SMTP_PASSWORD,
   },
+  tls: {
+    // 不验证证书（某些云平台需要）
+    rejectUnauthorized: false,
+  },
+  // 增加连接超时时间
+  connectionTimeout: 10000, // 10秒
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
 /**
@@ -34,6 +42,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
         </div>
       `,
     });
+    console.log(`[Email] Verification code sent successfully to ${email}`);
     return true;
   } catch (error) {
     console.error("Failed to send verification email:", error);
@@ -47,6 +56,7 @@ export async function sendVerificationEmail(email: string, code: string): Promis
 export async function testEmailConnection(): Promise<boolean> {
   try {
     await transporter.verify();
+    console.log("[Email] SMTP connection verified successfully");
     return true;
   } catch (error) {
     console.error("Email connection test failed:", error);
