@@ -18,7 +18,6 @@ export default function ResetPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [verifying, setVerifying] = useState(true);
   const [email, setEmail] = useState('');
 
   // 验证令牌
@@ -27,19 +26,31 @@ export default function ResetPassword() {
     {
       enabled: !!token,
       retry: false,
-      onSuccess: (data) => {
-        setEmail(data.email);
-        setVerifying(false);
-      },
-      onError: (err) => {
-        setError(err.message || '重置链接无效或已过期');
-        setVerifying(false);
-      },
     }
   );
 
-  const resetPasswordMutation = trpc.userManagement.resetPassword.useMutation({
-    onSuccess: () => {
+  const resetPasswordMutation = trpc.userManagement.resetPassword.useMutation();
+
+  useEffect(() => {
+    if (!token) {
+      setError('缺少重置令牌');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (verifyTokenQuery.data) {
+      setEmail(verifyTokenQuery.data.email);
+    }
+  }, [verifyTokenQuery.data]);
+
+  useEffect(() => {
+    if (verifyTokenQuery.error) {
+      setError(verifyTokenQuery.error.message || '重置链接无效或已过期');
+    }
+  }, [verifyTokenQuery.error]);
+
+  useEffect(() => {
+    if (resetPasswordMutation.isSuccess) {
       setSuccess(true);
       setIsLoading(false);
       
@@ -47,19 +58,15 @@ export default function ResetPassword() {
       setTimeout(() => {
         setLocation('/login');
       }, 3000);
-    },
-    onError: (err) => {
-      setError(err.message || '密码重置失败');
-      setIsLoading(false);
-    },
-  });
+    }
+  }, [resetPasswordMutation.isSuccess, setLocation]);
 
   useEffect(() => {
-    if (!token) {
-      setError('缺少重置令牌');
-      setVerifying(false);
+    if (resetPasswordMutation.error) {
+      setError(resetPasswordMutation.error.message || '密码重置失败');
+      setIsLoading(false);
     }
-  }, [token]);
+  }, [resetPasswordMutation.error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +102,7 @@ export default function ResetPassword() {
     resetPasswordMutation.mutate({ token, newPassword });
   };
 
-  if (verifying) {
+  if (verifyTokenQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
         <Card className="w-full max-w-md">
@@ -123,6 +130,34 @@ export default function ResetPassword() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button
+              className="w-full"
+              onClick={() => setLocation('/forgot-password')}
+            >
+              重新请求重置链接
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (verifyTokenQuery.isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center text-red-600">
+              链接无效
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {verifyTokenQuery.error?.message || '重置链接无效或已过期'}
+              </AlertDescription>
             </Alert>
             <Button
               className="w-full"
