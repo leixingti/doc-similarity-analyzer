@@ -6,11 +6,12 @@ import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
 import * as XLSX from 'xlsx';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { ArrowLeft, FileText, Loader2, Download, AlertCircle, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Download, AlertCircle, CheckCircle2, XCircle, ChevronDown, LayoutGrid } from "lucide-react";
 import { useParams, useLocation } from "wouter";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { DiffHighlight } from '@/components/DiffHighlight';
@@ -594,20 +595,124 @@ export default function ResultDetail() {
 
           {/* Comparison Tab */}
           <TabsContent value="comparison" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>文档对比视图</CardTitle>
-                <CardDescription>
-                  左右对比显示两个文档的差异
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <p className="mb-4">此功能即将推出，敬请期待！</p>
-                  <p className="text-sm">将为您呈现左右对比、颜色标注、差异列表等功能</p>
-                </div>
-              </CardContent>
-            </Card>
+            {segments.length >= 2 ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <LayoutGrid className="h-5 w-5 text-primary" />
+                    <CardTitle>文档对比视图</CardTitle>
+                  </div>
+                  <CardDescription>
+                    左右对比显示两个文档的差异，共找到 {segments.length} 个相似片段
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* 相似度概览 */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-primary">{similarity.toFixed(1)}%</p>
+                            <p className="text-sm text-muted-foreground">整体相似度</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-green-500">{segments.filter(s => s.similarity >= 80).length}</p>
+                            <p className="text-sm text-muted-foreground">高度相似片段</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-orange-500">{segments.filter(s => s.similarity >= 50 && s.similarity < 80).length}</p>
+                            <p className="text-sm text-muted-foreground">中度相似片段</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* 相似片段对比列表 */}
+                    <div className="space-y-4">
+                      {segments.map((segment, index) => {
+                        const segLevel = getSimilarityLevel(segment.similarity);
+                        return (
+                          <Card key={index} className={`border-2 ${segLevel.borderColor}`}>
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline">片段 #{index + 1}</Badge>
+                                  <span className={`text-sm font-bold ${segLevel.color}`}>
+                                    {segment.similarity.toFixed(1)}% 相似
+                                  </span>
+                                </div>
+                                <Badge className={segLevel.bgColor}>{segLevel.label}</Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                {/* 左侧：文档A */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    文档 A
+                                  </div>
+                                  <div className="p-3 bg-muted rounded-lg">
+                                    <p className="text-sm whitespace-pre-wrap">
+                                      {segment.doc1Segment || segment.text1 || '暂无内容'}
+                                    </p>
+                                  </div>
+                                </div>
+                                {/* 右侧：文档B */}
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                                    <FileText className="h-4 w-4" />
+                                    文档 B
+                                  </div>
+                                  <div className="p-3 bg-muted rounded-lg">
+                                    <p className="text-sm whitespace-pre-wrap">
+                                      {segment.doc2Segment || segment.text2 || '暂无内容'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                              {segment.reason && (
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">分析原因：</span>
+                                    {segment.reason}
+                                  </p>
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>文档对比视图</CardTitle>
+                  <CardDescription>
+                    左右对比显示两个文档的差异
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p className="mb-2">暂无可对比的片段</p>
+                    <p className="text-sm">需要至少 2 个相似片段才能显示对比视图</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Documents Tab */}
