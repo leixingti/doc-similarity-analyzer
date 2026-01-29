@@ -457,6 +457,117 @@ export default function VersionComparison() {
               </Card>
             )}
 
+            {/* 细微变化检测 */}
+            {comparisonResult.subtleChanges && comparisonResult.subtleChanges.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-orange-500" />
+                    细微变化检测
+                  </CardTitle>
+                  <CardDescription>
+                    检测到 {comparisonResult.subtleChanges.length} 处容易被忽略但可能有重大法律影响的细微变化
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* 细微变化统计 */}
+                  <div className="grid grid-cols-5 gap-4">
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="text-2xl font-bold text-red-600">
+                        {comparisonResult.subtleChanges.filter(c => c.riskLevel === 'high').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">高风险</div>
+                    </div>
+                    <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-600">
+                        {comparisonResult.subtleChanges.filter(c => c.riskLevel === 'medium').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">中风险</div>
+                    </div>
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {comparisonResult.subtleChanges.filter(c => c.riskLevel === 'low').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">低风险</div>
+                    </div>
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-600">
+                        {comparisonResult.subtleChanges.filter(c => c.type === 'punctuation').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">标点变化</div>
+                    </div>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600">
+                        {comparisonResult.subtleChanges.filter(c => c.type === 'unit').length}
+                      </div>
+                      <div className="text-xs text-muted-foreground">单位变化</div>
+                    </div>
+                  </div>
+
+                  {/* 细微变化报告 */}
+                  {comparisonResult.subtleChangeReport && (
+                    <div className="p-4 bg-muted rounded-lg">
+                      <h4 className="text-sm font-medium mb-2">细微变化报告</h4>
+                      <pre className="text-sm text-muted-foreground whitespace-pre-line font-sans">
+                        {comparisonResult.subtleChangeReport}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* 细微变化列表 */}
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {comparisonResult.subtleChanges.slice(0, 50).map((change, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded-lg border ${
+                          change.riskLevel === 'high'
+                            ? 'bg-red-50 border-red-200'
+                            : change.riskLevel === 'medium'
+                            ? 'bg-orange-50 border-orange-200'
+                            : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-muted-foreground">
+                                第 {change.lineNumber} 行
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                change.riskLevel === 'high'
+                                  ? 'bg-red-100 text-red-700'
+                                  : change.riskLevel === 'medium'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-blue-100 text-blue-700'
+                              }`}>
+                                {change.riskLevel === 'high' ? '高风险' : change.riskLevel === 'medium' ? '中风险' : '低风险'}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                                {change.type === 'punctuation' ? '标点' : 
+                                 change.type === 'unit' ? '单位' :
+                                 change.type === 'auxiliary' ? '助词' :
+                                 change.type === 'number' ? '数字' : '其他'}
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium mb-1">{change.description}</p>
+                            <p className="text-xs text-muted-foreground mb-2">
+                              “{change.oldValue}” → “{change.newValue}”
+                            </p>
+                            <p className="text-xs text-orange-600">
+                              ⚠️ {change.legalImpact}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1 italic">
+                              上下文：{change.context}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* 详细变化列表 */}
             <Card>
               <CardHeader>

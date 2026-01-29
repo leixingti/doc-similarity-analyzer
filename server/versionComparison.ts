@@ -2,6 +2,7 @@ import * as Diff from 'diff';
 import { analyzeChangesRisk, generateRiskStatistics, generateRiskSummary, type ChangeWithRisk } from './riskAnalyzer';
 import { getAllDocumentTypes } from './documentTypes';
 import { generateChangeSummary } from './changeSummaryGenerator';
+import { detectAllSubtleChanges, generateSubtleChangeReport, type SubtleChange } from './subtleChangeDetector';
 
 export interface VersionComparisonResult {
   version1: {
@@ -47,6 +48,8 @@ export interface VersionComparisonResult {
   };
   riskSummary?: string; // 风险摘要
   aiSummary?: string; // AI生成的变化摘要
+  subtleChanges?: SubtleChange[]; // 细微变化列表
+  subtleChangeReport?: string; // 细微变化报告
 }
 
 /**
@@ -140,6 +143,10 @@ export async function compareDocumentVersions(
     console.error('Failed to generate AI summary:', error);
   }
 
+  // 检测细微变化
+  const subtleChanges = detectAllSubtleChanges(doc1Content, doc2Content);
+  const subtleChangeReport = generateSubtleChangeReport(subtleChanges);
+
   return {
     version1: {
       documentId: doc1Info.id,
@@ -165,6 +172,8 @@ export async function compareDocumentVersions(
     riskStatistics,
     riskSummary,
     aiSummary,
+    subtleChanges,
+    subtleChangeReport,
   };
 }
 
