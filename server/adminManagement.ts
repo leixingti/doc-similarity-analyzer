@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, ne, and, sql } from "drizzle-orm";
 import { users } from "../drizzle/schema";
 import { getDb } from "./db";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 /**
  * 管理员管理路由
