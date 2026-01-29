@@ -30,7 +30,7 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: History, label: "历史记录", path: "/history" },
-  { icon: GitCompare, label: "版本对比", path: "/version-comparison" },
+  // { icon: GitCompare, label: "版本对比", path: "/version-comparison" },
   { icon: Grid3x3, label: "批量对比", path: "/batch-comparison" },
 ];
 

@@ -32,7 +32,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/results/:taskId" component={ResultDetail} />
       <Route path="/history" component={History} />
-      <Route path="/version-comparison" component={VersionComparison} />
+      {/* <Route path="/version-comparison" component={VersionComparison} /> */}
       <Route path="/batch-comparison" component={BatchComparison} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
