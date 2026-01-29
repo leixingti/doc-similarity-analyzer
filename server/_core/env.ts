@@ -21,7 +21,10 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-    // SMTP 配置
+  // Resend 邮件服务配置
+  RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
+  RESEND_FROM: process.env.RESEND_FROM ?? "onboarding@resend.dev",
+  // SMTP 配置（保留用于备用）
   SMTP_HOST: process.env.SMTP_HOST ?? "",
   SMTP_PORT: process.env.SMTP_PORT ?? "587",
   SMTP_USER: process.env.SMTP_USER ?? "",
