@@ -12,6 +12,7 @@ import VersionComparison from "./pages/VersionComparison";
 import BatchComparison from "./pages/BatchComparison";
 import ContractReview from "./pages/ContractReview";
 import DocumentFormatter from "./pages/DocumentFormatter";
+import DocumentGeneration from "./pages/DocumentGeneration";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/batch-comparison" component={BatchComparison} />
       <Route path="/contract-review" component={ContractReview} />
       <Route path="/document-formatter" component={DocumentFormatter} />
+      <Route path="/document-generation" component={DocumentGeneration} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

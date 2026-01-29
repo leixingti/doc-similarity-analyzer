@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, FileText, History, GitCompare, Grid3x3, Settings, FileCheck, Wand2 } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, FileText, History, GitCompare, Grid3x3, Settings, FileCheck, Wand2, FileSpreadsheet } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -34,6 +34,7 @@ const menuItems = [
   { icon: Grid3x3, label: "批量对比", path: "/batch-comparison" },
   { icon: FileCheck, label: "合同审核", path: "/contract-review" },
   { icon: Wand2, label: "格式处理", path: "/document-formatter" },
+  { icon: FileSpreadsheet, label: "文书生成", path: "/document-generation" },
 ];
 
 const adminMenuItems = [

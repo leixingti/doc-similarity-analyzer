@@ -7,6 +7,8 @@ import { compareDocumentVersions } from "./versionComparison";
 import { getAllDocumentTypes } from "./documentTypes";
 import { reviewContract } from "./contractReviewer";
 import { performOCR, convertPDFToWord, convertWordToPDF, batchAddWatermark, batchAddPageNumbers } from "./documentFormatter";
+import { DOCUMENT_TEMPLATES, getTemplateById, getTemplatesByCategory, getAllCategories, searchTemplates } from "./documentTemplates";
+import { parseExcelFile, parseCSVFile, batchGenerateDocuments, generateImportTemplate, previewGeneration, getImportStats } from "./batchImportService";
 import * as db from "./db";
 import { userManagementRouter } from "./userManagement";
 import { adminManagementRouter } from "./adminManagement";
@@ -630,6 +632,136 @@ export const appRouter = router({
         });
 
         return result;
+      }),
+  }),
+
+  // 文书模板
+  templates: router({
+    // 获取所有模板
+    list: protectedProcedure.query(() => {
+      return DOCUMENT_TEMPLATES;
+    }),
+
+    // 获取模板详情
+    getById: protectedProcedure
+      .input(z.object({ templateId: z.string() }))
+      .query(({ input }) => {
+        const template = getTemplateById(input.templateId);
+        if (!template) {
+          throw new Error('模板不存在');
+        }
+        return template;
+      }),
+
+    // 获取所有分类
+    getCategories: protectedProcedure.query(() => {
+      return getAllCategories();
+    }),
+
+    // 按分类获取模板
+    getByCategory: protectedProcedure
+      .input(z.object({ category: z.string() }))
+      .query(({ input }) => {
+        return getTemplatesByCategory(input.category);
+      }),
+
+    // 搜索模板
+    search: protectedProcedure
+      .input(z.object({ keyword: z.string() }))
+      .query(({ input }) => {
+        return searchTemplates(input.keyword);
+      }),
+
+    // 生成导入模板
+    generateImportTemplate: protectedProcedure
+      .input(z.object({ templateId: z.string() }))
+      .mutation(async ({ input }) => {
+        const buffer = generateImportTemplate(input.templateId);
+        const template = getTemplateById(input.templateId);
+        
+        return {
+          filename: `${template?.name || '模板'}_导入模板.xlsx`,
+          buffer: buffer.toString('base64')
+        };
+      }),
+
+    // 预览生成结果
+    preview: protectedProcedure
+      .input(
+        z.object({
+          templateId: z.string(),
+          data: z.record(z.any())
+        })
+      )
+      .query(({ input }) => {
+        return previewGeneration(input.templateId, input.data);
+      }),
+
+    // 批量生成文书
+    batchGenerate: protectedProcedure
+      .input(
+        z.object({
+          templateId: z.string(),
+          fileType: z.enum(['excel', 'csv']),
+          fileContent: z.string(), // base64编码
+          filenameTemplate: z.string().optional()
+        })
+      )
+      .mutation(async ({ input }) => {
+        // 解码文件内容
+        const buffer = Buffer.from(input.fileContent, 'base64');
+        
+        // 解析文件
+        let data;
+        if (input.fileType === 'excel') {
+          data = parseExcelFile(buffer);
+        } else {
+          data = parseCSVFile(buffer);
+        }
+        
+        // 批量生成
+        const zipBuffer = await batchGenerateDocuments(
+          input.templateId,
+          data,
+          input.filenameTemplate
+        );
+        
+        return {
+          filename: `批量生成文书_${new Date().getTime()}.zip`,
+          buffer: zipBuffer.toString('base64'),
+          count: data.length
+        };
+      }),
+
+    // 获取导入统计
+    getImportStats: protectedProcedure
+      .input(
+        z.object({
+          templateId: z.string(),
+          fileType: z.enum(['excel', 'csv']),
+          fileContent: z.string() // base64编码
+        })
+      )
+      .query(({ input }) => {
+        // 解码文件内容
+        const buffer = Buffer.from(input.fileContent, 'base64');
+        
+        // 解析文件
+        let data;
+        if (input.fileType === 'excel') {
+          data = parseExcelFile(buffer);
+        } else {
+          data = parseCSVFile(buffer);
+        }
+        
+        // 获取模板
+        const template = getTemplateById(input.templateId);
+        if (!template) {
+          throw new Error('模板不存在');
+        }
+        
+        // 获取统计
+        return getImportStats(data, template.variables);
       }),
   }),
 });
