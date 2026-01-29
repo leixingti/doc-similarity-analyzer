@@ -243,7 +243,7 @@ export const appRouter = router({
           throw new Error('任务不存在或无权限');
         }
 
-        const result = await db.getAnalysisResult(input.taskId);
+        const result = await db.getAnalysisResultByTaskId(input.taskId);
         if (!result) {
           throw new Error('分析结果不存在');
         }
@@ -317,7 +317,7 @@ export const appRouter = router({
           throw new Error('任务不存在或无权限');
         }
 
-        const result = await db.getAnalysisResult(input.taskId);
+        const result = await db.getAnalysisResultByTaskId(input.taskId);
         if (!result) {
           throw new Error('分析结果不存在');
         }
