@@ -135,7 +135,7 @@ export function DocumentComparisonView({
     return segments;
   };
 
-  const diffSegments = extractDiffSegments();}
+  const diffSegments = extractDiffSegments();
 
   // 同步滚动
   const handleScroll = (source: 'left' | 'right') => {
