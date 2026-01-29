@@ -4,12 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
-import { FileText, ArrowLeft, AlertCircle, CheckCircle2, MinusCircle, PlusCircle, Download } from "lucide-react";
+import { FileText, ArrowLeft, AlertCircle, CheckCircle2, MinusCircle, PlusCircle, Download, LayoutGrid, List } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { SideBySideComparisonView } from "@/components/SideBySideComparisonView";
 
 export default function VersionComparison() {
   const { user, loading } = useAuth();
@@ -17,6 +18,7 @@ export default function VersionComparison() {
   const [document1Id, setDocument1Id] = useState<number | null>(null);
   const [document2Id, setDocument2Id] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'sideBySide'>('list');
 
   // 导出PDF报告
   const exportToPDF = async () => {
@@ -255,10 +257,37 @@ export default function VersionComparison() {
           </div>
         )}
 
-        {comparisonResult && (
+        {comparisonResult && viewMode === 'sideBySide' && (
+          <SideBySideComparisonView
+            comparisonResult={comparisonResult}
+            document1Name={documents?.find(d => d.id === document1Id)?.filename || '文档1'}
+            document2Name={documents?.find(d => d.id === document2Id)?.filename || '文档2'}
+            onBack={() => setViewMode('list')}
+          />
+        )}
+
+        {comparisonResult && viewMode === 'list' && (
           <div className="space-y-6">
-            {/* 导出按钮 */}
-            <div className="flex justify-end">
+            {/* 视图切换和导出按钮 */}
+            <div className="flex justify-between items-center">
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="mr-2 h-4 w-4" />
+                  列表视图
+                </Button>
+                <Button
+                  variant={viewMode === 'sideBySide' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('sideBySide')}
+                >
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  左右对比
+                </Button>
+              </div>
               <Button onClick={exportToPDF} disabled={exporting}>
                 <Download className="mr-2 h-4 w-4" />
                 {exporting ? "导出中..." : "导出PDF报告"}
