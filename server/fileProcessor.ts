@@ -30,13 +30,36 @@ export async function processDocx(buffer: Buffer): Promise<ProcessedFile> {
     
     // 检查buffer是否有效
     if (!buffer || buffer.length === 0) {
-      throw new Error('Empty or invalid buffer');
+      throw new Error('文件为空或无效');
     }
     
     // 检查文件大小限制（50MB）
     const maxSize = 50 * 1024 * 1024;
     if (buffer.length > maxSize) {
-      throw new Error(`File too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB (max: 50MB)`);
+      throw new Error(`文件过大: ${(buffer.length / 1024 / 1024).toFixed(2)}MB（最大支持50MB）`);
+    }
+    
+    // 检查是否是有效的ZIP文件（DOCX本质是ZIP）
+    // ZIP文件的魔数是 50 4B 03 04
+    const isZip = buffer.length >= 4 && 
+                  buffer[0] === 0x50 && 
+                  buffer[1] === 0x4B && 
+                  (buffer[2] === 0x03 || buffer[2] === 0x05 || buffer[2] === 0x07) && 
+                  (buffer[3] === 0x04 || buffer[3] === 0x06 || buffer[3] === 0x08);
+    
+    if (!isZip) {
+      // 检查是否是旧版DOC格式（魔数是 D0 CF 11 E0）
+      const isOldDoc = buffer.length >= 4 &&
+                       buffer[0] === 0xD0 &&
+                       buffer[1] === 0xCF &&
+                       buffer[2] === 0x11 &&
+                       buffer[3] === 0xE0;
+      
+      if (isOldDoc) {
+        throw new Error('检测到旧版DOC格式，请使用Word将文件另存为DOCX格式后重新上传');
+      }
+      
+      throw new Error('文件格式无效，请确认这是一个有效的DOCX文件（不是重命名的DOC文件）');
     }
     
     const result = await mammoth.extractRawText({ buffer });
@@ -71,7 +94,15 @@ export async function processDocx(buffer: Buffer): Promise<ProcessedFile> {
       stack: error?.stack,
       name: error?.name,
     });
-    throw new Error(`Failed to process DOCX file: ${error?.message || 'Unknown error'}`);
+    
+    // 提供更友好的错误信息
+    let errorMessage = error?.message || '未知错误';
+    
+    if (errorMessage.includes('central directory') || errorMessage.includes('zip file')) {
+      errorMessage = '文件格式无效，这可能不是一个有效的DOCX文件。请检查：\n1. 文件是否损坏\n2. 文件是否是旧版DOC格式（请转换为DOCX）\n3. 文件扩展名是否正确';
+    }
+    
+    throw new Error(errorMessage);
   }
 }
 
