@@ -26,8 +26,36 @@ export interface ProcessedFile {
  */
 export async function processDocx(buffer: Buffer): Promise<ProcessedFile> {
   try {
+    console.log('[FileProcessor] Starting DOCX processing, buffer size:', buffer.length);
+    
+    // 检查buffer是否有效
+    if (!buffer || buffer.length === 0) {
+      throw new Error('Empty or invalid buffer');
+    }
+    
+    // 检查文件大小限制（50MB）
+    const maxSize = 50 * 1024 * 1024;
+    if (buffer.length > maxSize) {
+      throw new Error(`File too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB (max: 50MB)`);
+    }
+    
     const result = await mammoth.extractRawText({ buffer });
     const text = result.value;
+    
+    console.log('[FileProcessor] DOCX processed successfully, text length:', text.length);
+    
+    // 检查是否成功提取文本
+    if (!text || text.trim().length === 0) {
+      console.warn('[FileProcessor] DOCX file contains no text content');
+      // 不抛出错误，返回空文本
+      return {
+        text: '',
+        metadata: {
+          words: 0,
+          characters: 0,
+        }
+      };
+    }
     
     return {
       text,
@@ -36,9 +64,14 @@ export async function processDocx(buffer: Buffer): Promise<ProcessedFile> {
         characters: text.length,
       }
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('[FileProcessor] DOCX processing error:', error);
-    throw new Error('Failed to process DOCX file');
+    console.error('[FileProcessor] Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+    });
+    throw new Error(`Failed to process DOCX file: ${error?.message || 'Unknown error'}`);
   }
 }
 
