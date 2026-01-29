@@ -437,10 +437,10 @@ export default function ResultDetail() {
 
         {/* Detailed Results */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">概览</TabsTrigger>
             <TabsTrigger value="segments">相似片段</TabsTrigger>
-            <TabsTrigger value="comparison">文档对比</TabsTrigger>
+            {/* <TabsTrigger value="comparison">文档对比</TabsTrigger> */}
             <TabsTrigger value="visualization">可视化</TabsTrigger>
             <TabsTrigger value="documents">文档列表</TabsTrigger>
           </TabsList>
@@ -595,7 +595,7 @@ export default function ResultDetail() {
           </TabsContent>
 
           {/* Comparison Tab */}
-          <TabsContent value="comparison" className="space-y-6">
+          {/* <TabsContent value="comparison" className="space-y-6">
             {segments.length >= 1 && segments[0]?.doc1Segment && segments[0]?.doc2Segment ? (
               <DocumentComparisonView
                 document1Content={segments.map(s => s.doc1Segment || s.text1 || '').join('\n\n')}
@@ -722,7 +722,7 @@ export default function ResultDetail() {
                 </CardContent>
               </Card>
             )}
-          </TabsContent>
+          </TabsContent> */}
 
           {/* Documents Tab */}
           <TabsContent value="documents">

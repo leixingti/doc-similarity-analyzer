@@ -457,6 +457,11 @@ export default function DashboardNew() {
             历史记录
           </Button>
 
+          <Button variant="outline" onClick={() => setLocation("/version-comparison")}>
+            <GitCompare className="mr-2 h-4 w-4" />
+            版本对比
+          </Button>
+
           <Button variant="outline" onClick={() => setLocation("/batch-comparison")}>
             <Grid3x3 className="mr-2 h-4 w-4" />
             批量对比
