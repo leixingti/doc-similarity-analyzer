@@ -64,6 +64,7 @@ export const userManagementRouter = router({
         name: z.string().min(1),
         password: z.string().min(6),
         code: z.string().length(6),
+        adminInviteCode: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -89,6 +90,7 @@ export const userManagementRouter = router({
         email: input.email,
         name: input.name,
         password: input.password,
+        adminInviteCode: input.adminInviteCode,
       });
       
       // 注册成功后自动登录

@@ -29,6 +29,7 @@ export async function createUser(data: {
   email: string;
   password: string;
   name?: string;
+  adminInviteCode?: string;
 }): Promise<number> {
   try {
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -38,13 +39,34 @@ export async function createUser(data: {
       throw new Error('Database not available');
     }
     
+    // 检查是否已有管理员用户
+    const adminUsers = await db.select().from(users).where(eq(users.role, 'admin')).limit(1);
+    const hasAdmin = adminUsers.length > 0;
+    
+    // 检查是否使用了正确的管理员邀请码
+    const adminInviteCodeFromEnv = process.env.ADMIN_INVITE_CODE;
+    const isValidInviteCode = adminInviteCodeFromEnv && data.adminInviteCode === adminInviteCodeFromEnv;
+    
+    // 决定用户角色：
+    // 1. 如果没有管理员，首个用户自动成为管理员
+    // 2. 如果提供了正确的管理员邀请码，成为管理员
+    // 3. 否则为普通用户
+    let role: 'admin' | 'user' = 'user';
+    if (!hasAdmin) {
+      role = 'admin';
+      console.log('[authDb] First user registered, automatically set as admin:', data.email);
+    } else if (isValidInviteCode) {
+      role = 'admin';
+      console.log('[authDb] User registered with valid admin invite code:', data.email);
+    }
+    
     const result = await db.insert(users).values({
       email: data.email,
       password: hashedPassword,
       name: data.name || data.email.split('@')[0],
       loginMethod: "email",
       emailVerified: false,
-      role: "user",
+      role,
     });
     
     return Number(result[0].insertId);

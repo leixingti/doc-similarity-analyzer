@@ -21,6 +21,8 @@ export default function Login() {
   const [activeTab, setActiveTab] = useState('login');
   const [verificationCode, setVerificationCode] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [adminInviteCode, setAdminInviteCode] = useState('');
+  const [showAdminInvite, setShowAdminInvite] = useState(false);
   const utils = trpc.useUtils();
 
   // 倒计时逻辑
@@ -142,7 +144,13 @@ export default function Login() {
       return;
     }
 
-    registerMutation.mutate({ email, password, name, code: verificationCode });
+    registerMutation.mutate({ 
+      email, 
+      password, 
+      name, 
+      code: verificationCode,
+      adminInviteCode: adminInviteCode || undefined,
+    });
   };
 
   const handleOAuthLogin = () => {
@@ -337,6 +345,36 @@ export default function Login() {
                       disabled={isLoading}
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="register-admin-invite">管理员邀请码（可选）</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAdminInvite(!showAdminInvite)}
+                      className="text-xs h-auto p-0 text-blue-600 hover:text-blue-800"
+                    >
+                      {showAdminInvite ? '隐藏' : '成为管理员？'}
+                    </Button>
+                  </div>
+                  {showAdminInvite && (
+                    <Input
+                      id="register-admin-invite"
+                      type="text"
+                      placeholder="请输入管理员邀请码"
+                      value={adminInviteCode}
+                      onChange={(e) => setAdminInviteCode(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  )}
+                  {showAdminInvite && (
+                    <p className="text-xs text-gray-500">
+                      如果您有管理员邀请码，输入后将自动获得管理员权限
+                    </p>
+                  )}
                 </div>
 
                 <Button
