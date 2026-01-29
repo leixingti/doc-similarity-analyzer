@@ -24,6 +24,7 @@ export const ENV = {
   // Resend 邮件服务配置
   RESEND_API_KEY: process.env.RESEND_API_KEY ?? "",
   RESEND_FROM: process.env.RESEND_FROM ?? "onboarding@resend.dev",
+  FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:5000",
   // SMTP 配置（保留用于备用）
   SMTP_HOST: process.env.SMTP_HOST ?? "",
   SMTP_PORT: process.env.SMTP_PORT ?? "587",

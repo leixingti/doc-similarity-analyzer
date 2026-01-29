@@ -104,7 +104,7 @@ export async function sendPasswordResetEmail(email: string, resetToken: string):
     }
 
     // 构建重置链接
-    const resetUrl = `${env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     // 调用 Resend API
     const response = await fetch("https://api.resend.com/emails", {
