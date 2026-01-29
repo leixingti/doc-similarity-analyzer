@@ -15,6 +15,7 @@ import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import UserManagement from "./pages/UserManagement";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/user-management" component={UserManagement} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/results/:taskId" component={ResultDetail} />
       <Route path="/history" component={History} />

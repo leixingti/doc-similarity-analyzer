@@ -6,6 +6,7 @@ import { z } from "zod";
 import { compareDocumentVersions } from "./versionComparison";
 import * as db from "./db";
 import { userManagementRouter } from "./userManagement";
+import { adminManagementRouter } from "./adminManagement";
 import { statisticsRouter } from "./statistics";
 import { storagePut } from "./storage";
 import { processFile, isValidFileType, getFileExtension } from "./fileProcessor";
@@ -17,6 +18,7 @@ import { nanoid } from "nanoid";
 export const appRouter = router({
   system: systemRouter,
   userManagement: userManagementRouter,
+  adminManagement: adminManagementRouter,
   statistics: statisticsRouter,
   
   auth: router({
