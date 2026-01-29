@@ -15,6 +15,7 @@ import { ArrowLeft, FileText, Loader2, Download, AlertCircle, CheckCircle2, XCir
 import { useParams, useLocation } from "wouter";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { DiffHighlight } from '@/components/DiffHighlight';
+import { DocumentComparisonView } from '@/components/DocumentComparisonView';
 
 export default function ResultDetail() {
   const { taskId } = useParams();
@@ -595,7 +596,15 @@ export default function ResultDetail() {
 
           {/* Comparison Tab */}
           <TabsContent value="comparison" className="space-y-6">
-            {segments.length >= 2 ? (
+            {segments.length >= 1 && segments[0]?.doc1Segment && segments[0]?.doc2Segment ? (
+              <DocumentComparisonView
+                document1Content={segments.map(s => s.doc1Segment || s.text1 || '').join('\n\n')}
+                document2Content={segments.map(s => s.doc2Segment || s.text2 || '').join('\n\n')}
+                document1Name="原始文档"
+                document2Name="对比文档"
+                similarity={similarity}
+              />
+            ) : segments.length >= 2 ? (
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
