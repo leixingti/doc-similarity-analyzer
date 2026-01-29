@@ -19,12 +19,16 @@ import { serveStatic, setupVite } from "./vite";
 import { startServer, setupPerformanceMonitoring } from "./startup";
 import logger from "./logger";
 import { initializeDatabase } from "../db-optimized";
+import { initDatabase } from "../initDatabase";
 
 async function initializeApp() {
   // 初始化数据库（非阻塞，失败不会停止应用启动）
   initializeDatabase().catch((error) => {
     logger.warn({ err: error }, "Failed to initialize database on startup. App will continue running.");
   });
+  
+  // 初始化数据库表（创建缺失的表）
+  await initDatabase();
   const app = express();
   const server = createServer(app);
   
