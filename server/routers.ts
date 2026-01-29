@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { compareDocumentVersions } from "./versionComparison";
+import { getAllDocumentTypes } from "./documentTypes";
 import * as db from "./db";
 import { userManagementRouter } from "./userManagement";
 import { adminManagementRouter } from "./adminManagement";
@@ -385,11 +386,17 @@ export const appRouter = router({
 
   // 版本对比
   versions: router({
+    // 获取文档类型列表
+    getDocumentTypes: protectedProcedure.query(() => {
+      return getAllDocumentTypes();
+    }),
+    
     compare: protectedProcedure
       .input(
         z.object({
           document1Id: z.number(),
           document2Id: z.number(),
+          documentType: z.string().optional().default('other'),
         })
       )
       .query(async ({ input, ctx }) => {
@@ -414,7 +421,8 @@ export const appRouter = router({
           content1,
           content2,
           { id: doc1.id, filename: doc1.filename },
-          { id: doc2.id, filename: doc2.filename }
+          { id: doc2.id, filename: doc2.filename },
+          input.documentType
         );
 
         return result;

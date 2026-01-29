@@ -1,4 +1,7 @@
 import * as Diff from 'diff';
+import { analyzeChangesRisk, generateRiskStatistics, generateRiskSummary, type ChangeWithRisk } from './riskAnalyzer';
+import { getAllDocumentTypes } from './documentTypes';
+import { generateChangeSummary } from './changeSummaryGenerator';
 
 export interface VersionComparisonResult {
   version1: {
@@ -25,8 +28,25 @@ export interface VersionComparisonResult {
     oldContent?: string;
     newContent?: string;
     context?: string;
+    riskAnalysis?: {
+      riskLevel: 'high' | 'medium' | 'low';
+      category: string;
+      description: string;
+      matchedKeyword: string;
+    };
   }>;
   changeLevel: 'minimal' | 'light' | 'moderate' | 'significant'; // 变化程度
+  documentType?: string; // 文档类型
+  riskStatistics?: {
+    totalChanges: number;
+    highRisk: number;
+    mediumRisk: number;
+    lowRisk: number;
+    noRisk: number;
+    riskCategories: Array<{ category: string; count: number }>;
+  };
+  riskSummary?: string; // 风险摘要
+  aiSummary?: string; // AI生成的变化摘要
 }
 
 /**
@@ -36,7 +56,8 @@ export async function compareDocumentVersions(
   doc1Content: string,
   doc2Content: string,
   doc1Info: { id: number; filename: string },
-  doc2Info: { id: number; filename: string }
+  doc2Info: { id: number; filename: string },
+  documentType: string = 'other'
 ): Promise<VersionComparisonResult> {
   // 按行分割文本
   const lines1 = doc1Content.split('\n');
@@ -101,6 +122,24 @@ export async function compareDocumentVersions(
     changeLevel = 'significant'; // 重大变化
   }
 
+  // 进行风险分析
+  const changesWithRisk = analyzeChangesRisk(changes, documentType);
+  const riskStatistics = generateRiskStatistics(changesWithRisk);
+  const riskSummary = generateRiskSummary(changesWithRisk);
+  
+  // 生成AI变化摘要（异步，不阻塞主流程）
+  let aiSummary: string | undefined;
+  try {
+    aiSummary = await generateChangeSummary(
+      changesWithRisk,
+      documentType,
+      doc1Info.filename,
+      doc2Info.filename
+    );
+  } catch (error) {
+    console.error('Failed to generate AI summary:', error);
+  }
+
   return {
     version1: {
       documentId: doc1Info.id,
@@ -120,8 +159,12 @@ export async function compareDocumentVersions(
       unchangedLines,
       modificationRate: Math.round(modificationRate * 100) / 100,
     },
-    changes,
+    changes: changesWithRisk,
     changeLevel,
+    documentType,
+    riskStatistics,
+    riskSummary,
+    aiSummary,
   };
 }
 

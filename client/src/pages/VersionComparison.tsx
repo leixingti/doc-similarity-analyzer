@@ -11,12 +11,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { SideBySideComparisonView } from "@/components/SideBySideComparisonView";
+import { RiskBadge, RiskStatistics, RiskCategories } from "@/components/RiskBadge";
 
 export default function VersionComparison() {
   const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const [document1Id, setDocument1Id] = useState<number | null>(null);
   const [document2Id, setDocument2Id] = useState<number | null>(null);
+  const [documentType, setDocumentType] = useState<string>('other');
   const [exporting, setExporting] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'sideBySide'>('list');
 
@@ -122,11 +124,17 @@ export default function VersionComparison() {
     enabled: !!user,
   });
 
+  // 获取文档类型列表
+  const { data: documentTypes } = trpc.versions.getDocumentTypes.useQuery(undefined, {
+    enabled: !!user,
+  });
+
   // 获取对比结果
   const { data: comparisonResult, isLoading: comparing } = trpc.versions.compare.useQuery(
     {
       document1Id: document1Id!,
       document2Id: document2Id!,
+      documentType: documentType,
     },
     {
       enabled: !!document1Id && !!document2Id && document1Id !== document2Id,
@@ -201,43 +209,66 @@ export default function VersionComparison() {
             <CardDescription>选择两个文档进行版本对比</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              {/* 文档类型选择 */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">版本 1</label>
-                <Select
-                  value={document1Id?.toString()}
-                  onValueChange={(value) => setDocument1Id(parseInt(value))}
-                >
+                <label className="text-sm font-medium">文档类型</label>
+                <Select value={documentType} onValueChange={setDocumentType}>
                   <SelectTrigger>
-                    <SelectValue placeholder="选择文档" />
+                    <SelectValue placeholder="选择文档类型" />
                   </SelectTrigger>
                   <SelectContent>
-                    {documents?.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id.toString()}>
-                        {doc.filename}
+                    {documentTypes?.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  选择文档类型可以获得更精准的风险分析和关键字段识别
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">版本 2</label>
-                <Select
-                  value={document2Id?.toString()}
-                  onValueChange={(value) => setDocument2Id(parseInt(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="选择文档" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {documents?.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id.toString()}>
-                        {doc.filename}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* 版本选择 */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">版本 1</label>
+                  <Select
+                    value={document1Id?.toString()}
+                    onValueChange={(value) => setDocument1Id(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择文档" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documents?.map((doc) => (
+                        <SelectItem key={doc.id} value={doc.id.toString()}>
+                          {doc.filename}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">版本 2</label>
+                  <Select
+                    value={document2Id?.toString()}
+                    onValueChange={(value) => setDocument2Id(parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择文档" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documents?.map((doc) => (
+                        <SelectItem key={doc.id} value={doc.id.toString()}>
+                          {doc.filename}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -384,6 +415,48 @@ export default function VersionComparison() {
               </CardContent>
             </Card>
 
+            {/* 风险分析 */}
+            {comparisonResult.riskStatistics && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>风险分析</CardTitle>
+                  <CardDescription>
+                    基于文档类型（{documentTypes?.find(t => t.value === documentType)?.label}）的智能风险识别
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* 风险统计 */}
+                  <RiskStatistics statistics={comparisonResult.riskStatistics} />
+                  
+                  {/* AI变化摘要 */}
+                  {comparisonResult.aiSummary && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🤖</span>
+                        <h4 className="text-sm font-medium">智能变化分析</h4>
+                      </div>
+                      <p className="text-sm text-foreground whitespace-pre-line">
+                        {comparisonResult.aiSummary}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* 风险摘要 */}
+                  {comparisonResult.riskSummary && (
+                    <div className="p-4 bg-muted rounded-lg">
+                      <h4 className="text-sm font-medium mb-2">风险摘要</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line">
+                        {comparisonResult.riskSummary}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* 风险类别分布 */}
+                  <RiskCategories categories={comparisonResult.riskStatistics.riskCategories} />
+                </CardContent>
+              </Card>
+            )}
+
             {/* 详细变化列表 */}
             <Card>
               <CardHeader>
@@ -420,9 +493,18 @@ export default function VersionComparison() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium mb-1">
-                            行 {change.lineNumber}
-                          </p>
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="text-sm font-medium">
+                              行 {change.lineNumber}
+                            </p>
+                            {change.riskAnalysis && (
+                              <RiskBadge 
+                                level={change.riskAnalysis.riskLevel}
+                                category={change.riskAnalysis.category}
+                                description={change.riskAnalysis.description}
+                              />
+                            )}
+                          </div>
                           {change.oldContent && (
                             <p className="text-sm text-red-700 line-through mb-1">
                               {change.oldContent}
