@@ -435,9 +435,10 @@ export default function ResultDetail() {
 
         {/* Detailed Results */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">概览</TabsTrigger>
             <TabsTrigger value="segments">相似片段</TabsTrigger>
+            <TabsTrigger value="comparison">文档对比</TabsTrigger>
             <TabsTrigger value="visualization">可视化</TabsTrigger>
             <TabsTrigger value="documents">文档列表</TabsTrigger>
           </TabsList>
@@ -589,6 +590,24 @@ export default function ResultDetail() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Comparison Tab */}
+          <TabsContent value="comparison" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>文档对比视图</CardTitle>
+                <CardDescription>
+                  左右对比显示两个文档的差异
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="mb-4">此功能即将推出，敬请期待！</p>
+                  <p className="text-sm">将为您呈现左右对比、颜色标注、差异列表等功能</p>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Documents Tab */}
