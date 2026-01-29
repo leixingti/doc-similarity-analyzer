@@ -403,6 +403,38 @@ export const userManagementRouter = router({
     }),
 
   /**
+   * 临时功能：首次管理员设置
+   * 注意：这是一个临时功能，仅用于初始化管理员
+   * 在系统有管理员后应该删除此功能
+   */
+  setupFirstAdmin: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const db = await getDb();
+      
+      // 检查是否已有管理员
+      const adminUsers = await db!.select().from(users).where(eq(users.role, 'admin')).limit(1);
+      
+      if (adminUsers.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "系统已有管理员，无法使用此功能",
+        });
+      }
+      
+      // 将当前用户设置为管理员
+      await db!.update(users)
+        .set({ role: 'admin' })
+        .where(eq(users.id, ctx.user.id));
+      
+      console.log('[setupFirstAdmin] User set as admin:', ctx.user.email);
+      
+      return { 
+        success: true, 
+        message: "恭喜！您已成为管理员，请重新登录以刷新权限。" 
+      };
+    }),
+
+  /**
    * 重置密码
    */
   resetPassword: publicProcedure
