@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import { users, emailVerifications, type InsertUser, type InsertEmailVerification } from "../drizzle/schema";
+import { users, emailVerifications, passwordResetTokens, type InsertUser, type InsertEmailVerification, type InsertPasswordResetToken } from "../drizzle/schema";
 import { eq, and, gt } from "drizzle-orm";
 import bcrypt from "bcrypt";
 
@@ -121,4 +121,84 @@ export async function verifyEmailCode(email: string, code: string): Promise<bool
  */
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/**
+ * 创建密码重置令牌
+ */
+export async function createPasswordResetToken(email: string): Promise<string> {
+  const token = generateResetToken();
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30分钟后过期
+  
+  const db = await getDb();
+  await db!.insert(passwordResetTokens).values({
+    email,
+    token,
+    expiresAt,
+    used: false,
+  });
+  
+  return token;
+}
+
+/**
+ * 验证密码重置令牌
+ */
+export async function verifyPasswordResetToken(token: string): Promise<string | null> {
+  const db = await getDb();
+  const tokens = await db!
+    .select()
+    .from(passwordResetTokens)
+    .where(
+      and(
+        eq(passwordResetTokens.token, token),
+        eq(passwordResetTokens.used, false),
+        gt(passwordResetTokens.expiresAt, new Date())
+      )
+    )
+    .limit(1);
+  
+  const resetToken = tokens.length > 0 ? tokens[0] : null;
+  
+  if (!resetToken) {
+    return null;
+  }
+  
+  return resetToken.email;
+}
+
+/**
+ * 标记密码重置令牌为已使用
+ */
+export async function markTokenAsUsed(token: string): Promise<void> {
+  const db = await getDb();
+  await db!
+    .update(passwordResetTokens)
+    .set({ used: true })
+    .where(eq(passwordResetTokens.token, token));
+}
+
+/**
+ * 重置用户密码
+ */
+export async function resetUserPassword(email: string, newPassword: string): Promise<void> {
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  
+  const db = await getDb();
+  await db!
+    .update(users)
+    .set({ password: hashedPassword })
+    .where(eq(users.email, email));
+}
+
+/**
+ * 生成密码重置令牌（UUID格式）
+ */
+function generateResetToken(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 64; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
 }

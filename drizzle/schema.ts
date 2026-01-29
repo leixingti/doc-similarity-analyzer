@@ -37,6 +37,21 @@ export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = typeof emailVerifications.$inferInsert;
 
 /**
+ * 密码重置令牌表 - 存储密码重置令牌
+ */
+export const passwordResetTokens = mysqlTable("passwordResetTokens", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(), // 重置令牌
+  expiresAt: timestamp("expiresAt").notNull(), // 过期时间（30分钟）
+  used: boolean("used").default(false), // 是否已使用
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
+
+/**
  * 文档表 - 存储上传的文档信息
  */
 export const documents = mysqlTable("documents", {

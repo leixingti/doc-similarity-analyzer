@@ -91,3 +91,60 @@ export async function testEmailConnection(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * 发送密码重置邮件
+ */
+export async function sendPasswordResetEmail(email: string, resetToken: string): Promise<boolean> {
+  try {
+    // 检查是否配置了 Resend API Key
+    if (!env.RESEND_API_KEY) {
+      console.error("[Email] RESEND_API_KEY not configured");
+      return false;
+    }
+
+    // 构建重置链接
+    const resetUrl = `${env.FRONTEND_URL || 'http://localhost:5000'}/reset-password?token=${resetToken}`;
+
+    // 调用 Resend API
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: env.RESEND_FROM || "onboarding@resend.dev",
+        to: [email],
+        subject: "密码重置 - 文档相似度分析系统",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #333;">密码重置</h2>
+            <p>您好！</p>
+            <p>您请求重置文档相似度分析系统的密码。请点击下面的按钮重置密码：</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${resetUrl}" style="background-color: #4F46E5; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">重置密码</a>
+            </div>
+            <p style="color: #666;">如果按钮无法点击，请复制以下链接到浏览器：</p>
+            <p style="background-color: #f5f5f5; padding: 10px; word-break: break-all; font-size: 12px;">${resetUrl}</p>
+            <p style="color: #666;">此链接将在30分钟后过期。</p>
+            <p style="color: #999; font-size: 12px; margin-top: 30px;">如果这不是您的操作，请忽略此邮件，您的密码不会被更改。</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[Email] Resend API error:", errorData);
+      return false;
+    }
+
+    const data = await response.json();
+    console.log(`[Email] Password reset email sent successfully to ${email}, message ID: ${data.id}`);
+    return true;
+  } catch (error) {
+    console.error("[Email] Failed to send password reset email:", error);
+    return false;
+  }
+}

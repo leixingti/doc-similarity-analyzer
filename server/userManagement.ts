@@ -8,8 +8,12 @@ import {
   generateVerificationCode,
   createEmailVerification,
   verifyEmailCode,
+  createPasswordResetToken,
+  verifyPasswordResetToken,
+  markTokenAsUsed,
+  resetUserPassword,
 } from "./authDb";
-import { sendVerificationEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 import { getDb } from "./db";
 import { users } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -338,5 +342,91 @@ export const userManagementRouter = router({
         .where(eq(users.id, input.userId));
       
       return { success: true };
+    }),
+
+  /**
+   * 请求密码重置（发送重置邮件）
+   */
+  requestPasswordReset: publicProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // 检查用户是否存在
+      const user = await getUserByEmail(input.email);
+      
+      // 为了安全，即使用户不存在也返回成功，防止邮箱枚举
+      if (!user) {
+        return { success: true, message: "如果该邮箱已注册，将收到密码重置邮件" };
+      }
+      
+      // 生成重置令牌
+      const resetToken = await createPasswordResetToken(input.email);
+      
+      // 发送重置邮件
+      const sent = await sendPasswordResetEmail(input.email, resetToken);
+      
+      if (!sent) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "邮件发送失败，请稍后重试",
+        });
+      }
+      
+      return { success: true, message: "如果该邮箱已注册，将收到密码重置邮件" };
+    }),
+
+  /**
+   * 验证重置令牌
+   */
+  verifyResetToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+      })
+    )
+    .query(async ({ input }) => {
+      const email = await verifyPasswordResetToken(input.token);
+      
+      if (!email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "重置链接无效或已过期",
+        });
+      }
+      
+      return { success: true, email };
+    }),
+
+  /**
+   * 重置密码
+   */
+  resetPassword: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+        newPassword: z.string().min(6),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // 验证令牌
+      const email = await verifyPasswordResetToken(input.token);
+      
+      if (!email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "重置链接无效或已过期",
+        });
+      }
+      
+      // 重置密码
+      await resetUserPassword(email, input.newPassword);
+      
+      // 标记令牌为已使用
+      await markTokenAsUsed(input.token);
+      
+      return { success: true, message: "密码重置成功，请使用新密码登录" };
     }),
 });

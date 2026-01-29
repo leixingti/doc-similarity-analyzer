@@ -12,6 +12,8 @@ import VersionComparison from "./pages/VersionComparison";
 import BatchComparison from "./pages/BatchComparison";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import UserManagement from "./pages/UserManagement";
 
 function Router() {
@@ -20,6 +22,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/change-password" component={ChangePassword} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/user-management" component={UserManagement} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/results/:taskId" component={ResultDetail} />

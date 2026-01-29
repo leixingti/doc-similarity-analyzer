@@ -215,6 +215,16 @@ export default function Login() {
                   </div>
                 </div>
 
+                <div className="flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setLocation('/forgot-password')}
+                    className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    忘记密码？
+                  </button>
+                </div>
+
                 <Button
                   type="submit"
                   className="w-full"
