@@ -10,6 +10,8 @@ import ResultDetail from "./pages/ResultDetail";
 import History from "./pages/History";
 import VersionComparison from "./pages/VersionComparison";
 import BatchComparison from "./pages/BatchComparison";
+import ContractReview from "./pages/ContractReview";
+import DocumentFormatter from "./pages/DocumentFormatter";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -34,6 +36,8 @@ function Router() {
       <Route path="/history" component={History} />
       <Route path="/version-comparison" component={VersionComparison} />
       <Route path="/batch-comparison" component={BatchComparison} />
+      <Route path="/contract-review" component={ContractReview} />
+      <Route path="/document-formatter" component={DocumentFormatter} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

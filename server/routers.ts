@@ -5,6 +5,8 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { compareDocumentVersions } from "./versionComparison";
 import { getAllDocumentTypes } from "./documentTypes";
+import { reviewContract } from "./contractReviewer";
+import { performOCR, convertPDFToWord, convertWordToPDF, batchAddWatermark, batchAddPageNumbers } from "./documentFormatter";
 import * as db from "./db";
 import { userManagementRouter } from "./userManagement";
 import { adminManagementRouter } from "./adminManagement";
@@ -424,6 +426,208 @@ export const appRouter = router({
           { id: doc2.id, filename: doc2.filename },
           input.documentType
         );
+
+        return result;
+      }),
+  }),
+
+  // 合同审核
+  contract: router({
+    // 审核合同
+    review: protectedProcedure
+      .input(
+        z.object({
+          documentId: z.number(),
+          contractType: z.string(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const doc = await db.getDocumentById(input.documentId);
+
+        if (!doc) {
+          throw new Error('文档不存在');
+        }
+
+        // 验证权限
+        if (doc.userId !== ctx.user.id) {
+          throw new Error('无权访问此文档');
+        }
+
+        // 获取文档内容
+        const content = doc.extractedText || '';
+
+        if (!content) {
+          throw new Error('文档内容为空');
+        }
+
+        // 审核合同
+        const result = await reviewContract(content, input.contractType);
+
+        return result;
+      }),
+  }),
+
+  // 文档格式处理
+  formatter: router({
+    // OCR识别
+    ocr: protectedProcedure
+      .input(
+        z.object({
+          documentId: z.number(),
+          language: z.string().optional().default('chi_sim'),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const doc = await db.getDocumentById(input.documentId);
+
+        if (!doc) {
+          throw new Error('文档不存在');
+        }
+
+        // 验证权限
+        if (doc.userId !== ctx.user.id) {
+          throw new Error('无权访问此文档');
+        }
+
+        // 获取文件路径（假设文件存储在本地）
+        // 实际应用中需要从存储服务下载文件
+        const filePath = `/tmp/${doc.filename}`;
+
+        // 执行OCR
+        const result = await performOCR(filePath, input.language);
+
+        // 更新文档的提取文本
+        await db.updateDocument(input.documentId, {
+          extractedText: result.text,
+        });
+
+        return result;
+      }),
+
+    // PDF转Word
+    convertPDFToWord: protectedProcedure
+      .input(
+        z.object({
+          documentId: z.number(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const doc = await db.getDocumentById(input.documentId);
+
+        if (!doc) {
+          throw new Error('文档不存在');
+        }
+
+        // 验证权限
+        if (doc.userId !== ctx.user.id) {
+          throw new Error('无权访问此文档');
+        }
+
+        // 获取文件路径
+        const filePath = `/tmp/${doc.filename}`;
+
+        // 转换
+        const result = await convertPDFToWord(filePath);
+
+        return result;
+      }),
+
+    // Word转PDF
+    convertWordToPDF: protectedProcedure
+      .input(
+        z.object({
+          documentId: z.number(),
+          addWatermark: z.boolean().optional(),
+          watermarkText: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        const doc = await db.getDocumentById(input.documentId);
+
+        if (!doc) {
+          throw new Error('文档不存在');
+        }
+
+        // 验证权限
+        if (doc.userId !== ctx.user.id) {
+          throw new Error('无权访问此文档');
+        }
+
+        // 获取文件路径
+        const filePath = `/tmp/${doc.filename}`;
+
+        // 转换
+        const result = await convertWordToPDF(filePath, undefined, {
+          addWatermark: input.addWatermark,
+          watermarkText: input.watermarkText,
+        });
+
+        return result;
+      }),
+
+    // 批量添加水印
+    batchAddWatermark: protectedProcedure
+      .input(
+        z.object({
+          documentIds: z.array(z.number()),
+          watermarkText: z.string(),
+          opacity: z.number().optional(),
+          angle: z.number().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        // 验证所有文档权限
+        const docs = await Promise.all(
+          input.documentIds.map(id => db.getDocumentById(id))
+        );
+
+        for (const doc of docs) {
+          if (!doc || doc.userId !== ctx.user.id) {
+            throw new Error('无权访问某些文档');
+          }
+        }
+
+        // 获取文件路径
+        const filePaths = docs.map(doc => `/tmp/${doc!.filename}`);
+
+        // 批量添加水印
+        const result = await batchAddWatermark(filePaths, input.watermarkText, {
+          opacity: input.opacity,
+          angle: input.angle,
+        });
+
+        return result;
+      }),
+
+    // 批量添加页码
+    batchAddPageNumbers: protectedProcedure
+      .input(
+        z.object({
+          documentIds: z.array(z.number()),
+          position: z.enum(['top', 'bottom']).optional(),
+          format: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input, ctx }) => {
+        // 验证所有文档权限
+        const docs = await Promise.all(
+          input.documentIds.map(id => db.getDocumentById(id))
+        );
+
+        for (const doc of docs) {
+          if (!doc || doc.userId !== ctx.user.id) {
+            throw new Error('无权访问某些文档');
+          }
+        }
+
+        // 获取文件路径
+        const filePaths = docs.map(doc => `/tmp/${doc!.filename}`);
+
+        // 批量添加页码
+        const result = await batchAddPageNumbers(filePaths, {
+          position: input.position,
+          format: input.format,
+        });
 
         return result;
       }),

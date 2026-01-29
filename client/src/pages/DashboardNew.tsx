@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download, FileCheck, Wand2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -465,6 +465,16 @@ export default function DashboardNew() {
           <Button variant="outline" onClick={() => setLocation("/batch-comparison")}>
             <Grid3x3 className="mr-2 h-4 w-4" />
             批量对比
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/contract-review")}>
+            <FileCheck className="mr-2 h-4 w-4" />
+            合同审核
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/document-formatter")}>
+            <Wand2 className="mr-2 h-4 w-4" />
+            格式处理
           </Button>
 
           <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>
