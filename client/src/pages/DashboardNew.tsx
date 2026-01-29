@@ -364,7 +364,17 @@ export default function DashboardNew() {
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">欢迎, {user.name || user.email}</span>
             {user.role === 'admin' && (
-              <Badge variant="outline" className="text-xs">管理员</Badge>
+              <>
+                <Badge variant="outline" className="text-xs">管理员</Badge>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={() => setLocation('/admin')}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  管理员后台
+                </Button>
+              </>
             )}
             <Button variant="outline" size="sm" onClick={() => logout()}>
               登出
