@@ -28,7 +28,7 @@ export default function Home() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">文档相似度分析系统</span>
+            <span className="text-xl font-bold">智能文档处理系统</span>
           </div>
           <Button asChild>
             <Link href="/login">登录</Link>
@@ -40,10 +40,10 @@ export default function Home() {
       <section className="container py-20">
         <div className="text-center space-y-6 max-w-3xl mx-auto">
           <h1 className="text-5xl font-bold tracking-tight">
-            智能文档相似度分析
+            智能文档处理系统
           </h1>
           <p className="text-xl text-muted-foreground">
-            支持多种文档格式，结合传统算法与AI智能分析，快速检测文档相似性
+            专业的文档处理平台，提供文档对比、合同审查、格式转换、文书生成等全方位智能服务
           </p>
           <div className="flex gap-4 justify-center pt-4">
             <Button size="lg" asChild>
@@ -114,7 +114,7 @@ export default function Home() {
           <CardContent className="p-12 text-center">
             <h2 className="text-3xl font-bold mb-4">立即开始分析</h2>
             <p className="text-lg mb-6 opacity-90">
-              注册登录，免费使用文档相似度分析服务
+              注册登录，免费使用智能文档处理服务
             </p>
             <Button size="lg" variant="secondary" asChild>
               <Link href="/login">免费注册</Link>
@@ -126,7 +126,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t bg-card/50 backdrop-blur-sm py-8">
         <div className="container text-center text-sm text-muted-foreground">
-          <p>© 2026 文档相似度分析系统. All rights reserved.</p>
+          <p>© 2026 智能文档处理系统. All rights reserved.</p>
         </div>
       </footer>
     </div>
