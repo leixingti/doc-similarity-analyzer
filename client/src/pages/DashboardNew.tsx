@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download, FileCheck, Wand2, FileSpreadsheet, FolderOpen, Shield, Users, Scale, BarChart3 } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download, FileCheck, Wand2, FileSpreadsheet, FolderOpen, Shield, Users, Scale, BarChart3, Sparkles } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -505,6 +505,16 @@ export default function DashboardNew() {
           <Button variant="outline" onClick={() => setLocation("/reports")}>
             <BarChart3 className="mr-2 h-4 w-4" />
             报表统计
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/ai-assistant")}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            AI助手
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/security")}>
+            <Shield className="mr-2 h-4 w-4" />
+            安全设置
           </Button>
 
           <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>

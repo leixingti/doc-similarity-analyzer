@@ -20,6 +20,8 @@ import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
 import CaseSearch from "./pages/CaseSearch";
 import Reports from "./pages/Reports";
+import AIAssistant from "./pages/AIAssistant";
+import Security from "./pages/Security";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -54,6 +56,8 @@ function Router() {
       <Route path="/collaboration" component={Collaboration} />
       <Route path="/case-search" component={CaseSearch} />
       <Route path="/reports" component={Reports} />
+      <Route path="/ai-assistant" component={AIAssistant} />
+      <Route path="/security" component={Security} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
