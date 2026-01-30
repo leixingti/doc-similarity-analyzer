@@ -16,6 +16,10 @@ import DocumentGeneration from "./pages/DocumentGeneration";
 import DocumentManagement from "./pages/DocumentManagement";
 import EvidenceManagement from "./pages/EvidenceManagement";
 import Collaboration from "./pages/Collaboration";
+import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+import CaseSearch from "./pages/CaseSearch";
+import Reports from "./pages/Reports";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -29,6 +33,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/change-password" component={ChangePassword} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/reset-password" component={ResetPassword} />
@@ -46,6 +52,8 @@ function Router() {
       <Route path="/document-management" component={DocumentManagement} />
       <Route path="/evidence-management" component={EvidenceManagement} />
       <Route path="/collaboration" component={Collaboration} />
+      <Route path="/case-search" component={CaseSearch} />
+      <Route path="/reports" component={Reports} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
