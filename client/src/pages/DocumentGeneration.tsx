@@ -173,8 +173,7 @@ export default function DocumentGeneration() {
           返回首页
         </Button>
       </div>
-      <div className="container mx-auto p-6">
-    <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">文书批量生成</h1>
@@ -475,6 +474,7 @@ export default function DocumentGeneration() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

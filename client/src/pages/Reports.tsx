@@ -424,7 +424,6 @@ export default function Reports() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
       </div>
     </div>
   );

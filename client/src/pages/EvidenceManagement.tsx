@@ -151,8 +151,7 @@ export default function EvidenceManagement() {
           返回首页
         </Button>
       </div>
-      <div className="container mx-auto p-6">
-    <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto p-6 space-y-6">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>
@@ -615,6 +614,7 @@ export default function EvidenceManagement() {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }
