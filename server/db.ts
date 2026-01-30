@@ -12,6 +12,16 @@ import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// 导出db实例（用于向后兼容）
+export const db = new Proxy({} as ReturnType<typeof drizzle>, {
+  get: (target, prop) => {
+    if (!_db) {
+      throw new Error('Database not initialized. Call getDb() first.');
+    }
+    return (_db as any)[prop];
+  }
+});
+
 export async function getDb() {
   if (!_db) {
     const dbUrl = 'mysql://2SDxeZiTrYjeW97.root:E8io4SjtjPyWNHLA@gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test';
