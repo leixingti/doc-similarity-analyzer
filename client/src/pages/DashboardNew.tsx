@@ -144,8 +144,8 @@ export default function DashboardNew() {
     
     for (const file of files) {
       // 验证文件大小
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`文件 ${file.name} 大小超过10MB，已跳过`);
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error(`文件 ${file.name} 大小超过50MB，已跳过`);
         continue;
       }
       validFiles.push(file);
@@ -401,7 +401,7 @@ export default function DashboardNew() {
               <DialogHeader>
                 <DialogTitle>上传文档</DialogTitle>
                 <DialogDescription>
-                  支持DOCX、PDF、TXT、PPTX、XLSX、Markdown、HTML格式，最大10MB
+                  支持DOCX、PDF、TXT、PPTX、XLSX、Markdown、HTML格式，最大50MB
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">

@@ -60,9 +60,9 @@ export const appRouter = router({
           throw new Error(`不支持的文件类型: ${input.fileType}`);
         }
 
-        // 验证文件大小（10MB限制）
-        if (input.fileSize > 10 * 1024 * 1024) {
-          throw new Error('文件大小超过10MB限制');
+        // 验证文件大小（50MB限制）
+        if (input.fileSize > 50 * 1024 * 1024) {
+          throw new Error('文件大小超过50MB限制');
         }
 
         // 解码文件内容
