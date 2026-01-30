@@ -80,6 +80,22 @@ export interface Suggestion {
 }
 
 /**
+ * 合同类型英文到中文映射
+ */
+export const CONTRACT_TYPE_MAP: Record<string, keyof typeof CONTRACT_TYPES> = {
+  'commercial': '商事合同',
+  'labor': '劳动合同',
+  'real_estate': '房地产合同',
+  'financial': '金融合同',
+  'internet': '互联网合同',
+  'manufacturing': '制造业合同',
+  'construction': '建筑工程合同',
+  'ip': '知识产权合同',
+  'service': '劳务合同',
+  'general_service': '服务合同',
+};
+
+/**
  * 合同类型配置
  */
 export const CONTRACT_TYPES = {
@@ -553,10 +569,18 @@ const AMBIGUOUS_PATTERNS = [
  */
 export async function reviewContract(
   content: string,
-  contractType: keyof typeof CONTRACT_TYPES = '商事合同'
+  contractType: string = '商事合同'
 ): Promise<ContractReviewResult> {
   const lines = content.split('\n');
-  const config = CONTRACT_TYPES[contractType];
+  
+  // 如果是英文类型，转换为中文
+  const chineseType = (CONTRACT_TYPE_MAP[contractType] || contractType) as keyof typeof CONTRACT_TYPES;
+  const config = CONTRACT_TYPES[chineseType];
+  
+  // 如果配置不存在，使用默认配置
+  if (!config) {
+    throw new Error(`不支持的合同类型: ${contractType}`);
+  }
 
   // 1. 检查必备条款
   const missingClauses = checkRequiredClauses(content, config.requiredClauses);
@@ -571,7 +595,7 @@ export async function reviewContract(
   const conflicts = detectConflicts(lines);
 
   // 5. 检查合规性
-  const complianceIssues = checkCompliance(lines, contractType);
+  const complianceIssues = checkCompliance(lines, chineseType);
 
   // 6. 生成优化建议
   const suggestions = generateSuggestions(
