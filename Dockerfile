@@ -30,8 +30,8 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# 安装运行时依赖
-RUN apk add --no-cache dumb-init curl
+# 安装运行时依赖和LibreOffice
+RUN apk add --no-cache dumb-init curl libreoffice openjdk11-jre ttf-dejavu fontconfig
 
 # 安装 pnpm
 RUN npm install -g pnpm
