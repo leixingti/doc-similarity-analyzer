@@ -159,15 +159,34 @@ export async function convertPDFToWord(
   outputPath?: string
 ): Promise<ConversionResult> {
   try {
-    const output = outputPath || pdfPath.replace('.pdf', '.docx');
+    // 确保 uploads 目录存在
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
+    
+    // 生成唯一文件名
+    const basename = path.basename(pdfPath, '.pdf');
+    const timestamp = Date.now();
+    const outputFilename = `${basename}_${timestamp}.docx`;
+    const output = outputPath || path.join(uploadsDir, outputFilename);
     
     // 使用libreoffice进行转换
     const outputDir = path.dirname(output);
     await execAsync(`libreoffice --headless --convert-to docx --outdir "${outputDir}" "${pdfPath}"`);
     
+    // 如果指定了输出路径但文件名不同，需要重命名
+    const convertedFile = path.join(outputDir, path.basename(pdfPath, '.pdf') + '.docx');
+    if (convertedFile !== output) {
+      await fs.rename(convertedFile, output);
+    }
+    
+    // 返回可访问的URL路径
+    const urlPath = output.includes('/uploads/') 
+      ? `/uploads/${path.basename(output)}`
+      : output;
+    
     return {
       success: true,
-      outputPath: output,
+      outputPath: urlPath,
       format: 'docx'
     };
   } catch (error) {
@@ -192,20 +211,39 @@ export async function convertWordToPDF(
   }
 ): Promise<ConversionResult> {
   try {
-    const output = outputPath || wordPath.replace(/\.(docx?|doc)$/, '.pdf');
+    // 确保 uploads 目录存在
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    await fs.mkdir(uploadsDir, { recursive: true });
+    
+    // 生成唯一文件名
+    const basename = path.basename(wordPath, path.extname(wordPath));
+    const timestamp = Date.now();
+    const outputFilename = `${basename}_${timestamp}.pdf`;
+    const output = outputPath || path.join(uploadsDir, outputFilename);
     
     // 使用libreoffice进行转换
     const outputDir = path.dirname(output);
     await execAsync(`libreoffice --headless --convert-to pdf --outdir "${outputDir}" "${wordPath}"`);
+    
+    // 如果指定了输出路径但文件名不同，需要重命名
+    const convertedFile = path.join(outputDir, path.basename(wordPath, path.extname(wordPath)) + '.pdf');
+    if (convertedFile !== output) {
+      await fs.rename(convertedFile, output);
+    }
     
     // 如果需要添加水印
     if (options?.addWatermark && options?.watermarkText) {
       await addWatermarkToPDF(output, options.watermarkText);
     }
     
+    // 返回可访问的URL路径
+    const urlPath = output.includes('/uploads/') 
+      ? `/uploads/${path.basename(output)}`
+      : output;
+    
     return {
       success: true,
-      outputPath: output,
+      outputPath: urlPath,
       format: 'pdf'
     };
   } catch (error) {
