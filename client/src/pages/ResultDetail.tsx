@@ -51,7 +51,7 @@ export default function ResultDetail() {
           <div className="container flex h-16 items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              返回
+              返回首页
             </Button>
             <div className="flex items-center gap-2">
               <FileText className="h-6 w-6 text-primary" />
@@ -63,7 +63,7 @@ export default function ResultDetail() {
           <AlertCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">任务不存在</h2>
           <p className="text-muted-foreground mb-6">该分析任务不存在或您没有权限访问</p>
-          <Button onClick={() => setLocation("/dashboard")}>返回控制台</Button>
+          <Button onClick={() => setLocation("/dashboard")}>返回首页</Button>
         </div>
       </div>
     );
@@ -306,7 +306,7 @@ export default function ResultDetail() {
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              返回
+              返回首页
             </Button>
             <div className="flex items-center gap-2">
               <FileText className="h-6 w-6 text-primary" />

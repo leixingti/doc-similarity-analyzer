@@ -193,7 +193,7 @@ export default function VersionComparison() {
         <div className="container flex h-16 items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            返回
+            返回首页
           </Button>
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
