@@ -764,6 +764,199 @@ export const appRouter = router({
         return getImportStats(data, template.variables);
       }),
   }),
+
+  // 文档管理系统
+  documentManagement: router({
+    // 案件管理
+    cases: router({
+      create: protectedProcedure
+        .input(z.object({
+          caseNumber: z.string(),
+          caseName: z.string(),
+          caseType: z.string(),
+          caseStatus: z.string().optional(),
+          court: z.string().optional(),
+          judge: z.string().optional(),
+          plaintiff: z.string().optional(),
+          defendant: z.string().optional(),
+          caseAmount: z.string().optional(),
+          filingDate: z.date().optional(),
+          trialDate: z.date().optional(),
+          closingDate: z.date().optional(),
+          description: z.string().optional(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const { createCase } = await import('./documentManagementService');
+          return createCase({ ...input, userId: ctx.user.id });
+        }),
+      
+      list: protectedProcedure
+        .input(z.object({
+          caseType: z.string().optional(),
+          caseStatus: z.string().optional(),
+          search: z.string().optional(),
+        }).optional())
+        .query(async ({ ctx, input }) => {
+          const { getUserCases } = await import('./documentManagementService');
+          return getUserCases(ctx.user.id, input);
+        }),
+      
+      get: protectedProcedure
+        .input(z.object({ caseId: z.number() }))
+        .query(async ({ ctx, input }) => {
+          const { getCaseById } = await import('./documentManagementService');
+          return getCaseById(input.caseId, ctx.user.id);
+        }),
+      
+      update: protectedProcedure
+        .input(z.object({
+          caseId: z.number(),
+          updates: z.object({
+            caseName: z.string().optional(),
+            caseStatus: z.string().optional(),
+            court: z.string().optional(),
+            judge: z.string().optional(),
+            plaintiff: z.string().optional(),
+            defendant: z.string().optional(),
+            caseAmount: z.string().optional(),
+            filingDate: z.date().optional(),
+            trialDate: z.date().optional(),
+            closingDate: z.date().optional(),
+            description: z.string().optional(),
+            notes: z.string().optional(),
+          }),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const { updateCase } = await import('./documentManagementService');
+          return updateCase(input.caseId, ctx.user.id, input.updates);
+        }),
+      
+      delete: protectedProcedure
+        .input(z.object({ caseId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const { deleteCase } = await import('./documentManagementService');
+          await deleteCase(input.caseId, ctx.user.id);
+          return { success: true };
+        }),
+      
+      statistics: protectedProcedure
+        .query(async ({ ctx }) => {
+          const { getCaseStatistics } = await import('./documentManagementService');
+          return getCaseStatistics(ctx.user.id);
+        }),
+    }),
+    
+    // 文档管理
+    docs: router({
+      create: protectedProcedure
+        .input(z.object({
+          caseId: z.number().optional(),
+          fileName: z.string(),
+          fileType: z.string(),
+          fileSize: z.number(),
+          filePath: z.string(),
+          documentType: z.string().optional(),
+          category: z.string().optional(),
+          tags: z.string().optional(),
+          content: z.string().optional(),
+          description: z.string().optional(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const { createDocument } = await import('./documentManagementService');
+          return createDocument({ ...input, userId: ctx.user.id });
+        }),
+      
+      list: protectedProcedure
+        .input(z.object({
+          caseId: z.number().optional(),
+          documentType: z.string().optional(),
+          category: z.string().optional(),
+          tags: z.array(z.string()).optional(),
+          search: z.string().optional(),
+          onlyLatest: z.boolean().optional(),
+        }).optional())
+        .query(async ({ ctx, input }) => {
+          const { getUserDocuments } = await import('./documentManagementService');
+          return getUserDocuments(ctx.user.id, input);
+        }),
+      
+      get: protectedProcedure
+        .input(z.object({ documentId: z.number() }))
+        .query(async ({ ctx, input }) => {
+          const { getDocumentById } = await import('./documentManagementService');
+          return getDocumentById(input.documentId, ctx.user.id);
+        }),
+      
+      update: protectedProcedure
+        .input(z.object({
+          documentId: z.number(),
+          updates: z.object({
+            caseId: z.number().optional(),
+            documentType: z.string().optional(),
+            category: z.string().optional(),
+            tags: z.string().optional(),
+            description: z.string().optional(),
+            notes: z.string().optional(),
+          }),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          const { updateDocument } = await import('./documentManagementService');
+          return updateDocument(input.documentId, ctx.user.id, input.updates);
+        }),
+      
+      delete: protectedProcedure
+        .input(z.object({ documentId: z.number() }))
+        .mutation(async ({ ctx, input }) => {
+          const { deleteDocument } = await import('./documentManagementService');
+          await deleteDocument(input.documentId, ctx.user.id);
+          return { success: true };
+        }),
+      
+      statistics: protectedProcedure
+        .input(z.object({ caseId: z.number().optional() }).optional())
+        .query(async ({ ctx, input }) => {
+          const { getDocumentStatistics } = await import('./documentManagementService');
+          return getDocumentStatistics(ctx.user.id, input?.caseId);
+        }),
+      
+      types: protectedProcedure
+        .query(async ({ ctx }) => {
+          const { getDocumentTypes } = await import('./documentManagementService');
+          return getDocumentTypes(ctx.user.id);
+        }),
+      
+      categories: protectedProcedure
+        .query(async ({ ctx }) => {
+          const { getCategories } = await import('./documentManagementService');
+          return getCategories(ctx.user.id);
+        }),
+    }),
+    
+    // 搜索
+    search: protectedProcedure
+      .input(z.object({
+        query: z.string(),
+        filters: z.object({
+          caseId: z.number().optional(),
+          documentType: z.string().optional(),
+          category: z.string().optional(),
+          tags: z.array(z.string()).optional(),
+          dateFrom: z.date().optional(),
+          dateTo: z.date().optional(),
+          fileType: z.string().optional(),
+        }).optional(),
+        sortBy: z.enum(['relevance', 'date', 'size', 'name']).optional(),
+        sortOrder: z.enum(['asc', 'desc']).optional(),
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const { searchDocuments } = await import('./documentSearchService');
+        return searchDocuments({ ...input, userId: ctx.user.id });
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
