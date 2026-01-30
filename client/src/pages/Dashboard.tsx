@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
 import { toast } from "sonner";
 import { DocumentPreviewDialog } from "@/components/DocumentPreviewDialog";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Dashboard() {
   const { user, loading: authLoading, logout } = useAuth();

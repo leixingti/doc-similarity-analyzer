@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, FileText } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function BatchComparison() {
   const [, setLocation] = useLocation();

@@ -9,6 +9,7 @@ import { ArrowLeft, FileText, Loader2, TrendingUp, BarChart3, Clock } from "luci
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function History() {
   const [, setLocation] = useLocation();

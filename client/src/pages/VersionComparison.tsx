@@ -12,6 +12,7 @@ import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { SideBySideComparisonView } from "@/components/SideBySideComparisonView";
 import { RiskBadge, RiskStatistics, RiskCategories } from "@/components/RiskBadge";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function VersionComparison() {
   const { user, loading } = useAuth();

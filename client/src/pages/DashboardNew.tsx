@@ -29,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function DashboardNew() {
   const { user, loading: authLoading, logout } = useAuth();

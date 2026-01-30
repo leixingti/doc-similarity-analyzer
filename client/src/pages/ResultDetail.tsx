@@ -16,6 +16,7 @@ import { useParams, useLocation } from "wouter";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { DiffHighlight } from '@/components/DiffHighlight';
 import { DocumentComparisonView } from '@/components/DocumentComparisonView';
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function ResultDetail() {
   const { taskId } = useParams();

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function DocumentFormatter() {
   const { user, loading } = useAuth();
