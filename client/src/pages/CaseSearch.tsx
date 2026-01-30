@@ -580,6 +580,5 @@ export default function CaseSearch() {
       )}
     </div>
       </div>
-    </div>
   );
 }

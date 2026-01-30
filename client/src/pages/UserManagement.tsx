@@ -331,6 +331,5 @@ export default function UserManagement() {
       </Dialog>
     </div>
       </div>
-    </div>
   );
 }
