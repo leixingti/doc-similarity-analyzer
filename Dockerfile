@@ -1,4 +1,5 @@
 # 多阶段构建 - 第一阶段：构建
+# Cache bust: 2026-01-30-07:30:00
 FROM node:22-alpine AS builder
 
 WORKDIR /app
