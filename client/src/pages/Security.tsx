@@ -482,7 +482,6 @@ export default function Security() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
       </div>
     </div>
   );
