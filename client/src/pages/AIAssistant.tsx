@@ -17,7 +17,7 @@ import {
   Download,
   Copy,
   Loader2
-} from "lucide-react";
+, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AIAssistant() {
@@ -202,6 +202,12 @@ export default function AIAssistant() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* 返回按钮 */}
+      <Button variant="ghost" onClick={() => window.location.href = '/dashboard'}>
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        返回首页
+      </Button>
+      
       {/* 页面标题 */}
       <div className="flex items-center justify-between">
         <div>

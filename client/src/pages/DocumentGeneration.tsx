@@ -7,7 +7,7 @@ import { Label } from '../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { FileText, Download, Upload, Eye, AlertCircle, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { FileText, Download, Upload, Eye, AlertCircle, CheckCircle2, FileSpreadsheet , ArrowLeft } from "lucide-react";
 import { Textarea } from '../components/ui/textarea';
 
 export default function DocumentGeneration() {
@@ -166,6 +166,14 @@ export default function DocumentGeneration() {
   };
 
   return (
+    <div className="min-h-screen bg-background">
+      <div className="container py-4">
+        <Button variant="ghost" onClick={() => window.location.href = "/dashboard"}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          返回首页
+        </Button>
+      </div>
+      <div className="container mx-auto p-6">
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>

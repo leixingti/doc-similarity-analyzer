@@ -21,7 +21,7 @@ import {
   Lightbulb,
   BookOpen,
   Filter
-} from "lucide-react";
+, ArrowLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
@@ -101,6 +101,14 @@ export default function CaseSearch() {
   };
 
   return (
+    <div className="min-h-screen bg-background">
+      <div className="container py-4">
+        <Button variant="ghost" onClick={() => window.location.href = "/dashboard"}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          返回首页
+        </Button>
+      </div>
+      <div className="container mx-auto p-6">
     <div className="container mx-auto p-6 space-y-6">
       {/* 页面标题 */}
       <div className="flex items-center justify-between">

@@ -22,7 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus, Trash2, Key, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Key, AlertCircle, CheckCircle2 , ArrowLeft } from "lucide-react";
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/lib/auth';
 
@@ -117,6 +117,14 @@ export default function UserManagement() {
 
   if (user?.role !== 'admin') {
     return (
+    <div className="min-h-screen bg-background">
+      <div className="container py-4">
+        <Button variant="ghost" onClick={() => window.location.href = "/dashboard"}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          返回首页
+        </Button>
+      </div>
+      <div className="container mx-auto p-6">
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
