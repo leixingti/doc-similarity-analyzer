@@ -117,14 +117,6 @@ export default function UserManagement() {
 
   if (user?.role !== 'admin') {
     return (
-    <div className="min-h-screen bg-background">
-      <div className="container py-4">
-        <Button variant="ghost" onClick={() => window.location.href = "/dashboard"}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          返回首页
-        </Button>
-      </div>
-      <div className="container mx-auto p-6">
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -135,7 +127,14 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="container py-4">
+        <Button variant="ghost" onClick={() => window.location.href = "/dashboard"}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          返回首页
+        </Button>
+      </div>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">用户管理</h1>
@@ -330,6 +329,8 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+      </div>
     </div>
   );
 }
