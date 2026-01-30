@@ -360,7 +360,7 @@ export default function DashboardNew() {
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">文档相似度分析系统</span>
+            <span className="text-xl font-bold">智能文档处理系统</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">欢迎, {user.name || user.email}</span>
