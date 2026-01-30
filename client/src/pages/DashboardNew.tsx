@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
-import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download, FileCheck, Wand2, FileSpreadsheet } from "lucide-react";
+import { FileText, Plus, Upload, Loader2, CheckCircle2, XCircle, Clock, GitCompare, Eye, Grid3x3, Trash2, Download, FileCheck, Wand2, FileSpreadsheet, FolderOpen } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
@@ -480,6 +480,11 @@ export default function DashboardNew() {
           <Button variant="outline" onClick={() => setLocation("/document-generation")}>
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             文书生成
+          </Button>
+
+          <Button variant="outline" onClick={() => setLocation("/document-management")}>
+            <FolderOpen className="mr-2 h-4 w-4" />
+            文档管理
           </Button>
 
           <Dialog open={createTaskDialogOpen} onOpenChange={setCreateTaskDialogOpen}>
