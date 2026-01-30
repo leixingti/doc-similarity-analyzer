@@ -265,29 +265,45 @@ export async function batchAddWatermark(
   let succeeded = 0;
   let failed = 0;
   
+  // 确保 uploads 目录存在
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  await fs.mkdir(uploadsDir, { recursive: true });
+  
   for (const file of files) {
     try {
       const ext = path.extname(file).toLowerCase();
+      const basename = path.basename(file, ext);
+      const timestamp = Date.now();
       
       if (ext === '.pdf') {
-        await addWatermarkToPDF(file, watermarkText, options);
+        // 复制到 uploads 目录
+        const outputFilename = `${basename}_watermarked_${timestamp}.pdf`;
+        const outputPath = path.join(uploadsDir, outputFilename);
+        await fs.copyFile(file, outputPath);
+        
+        // 添加水印
+        await addWatermarkToPDF(outputPath, watermarkText, options);
+        
         results.push({
           filename: path.basename(file),
           success: true,
-          outputPath: file
+          outputPath: `/uploads/${outputFilename}`
         });
         succeeded++;
       } else if (['.docx', '.doc'].includes(ext)) {
-        // Word文档水印需要先转PDF，添加水印，再转回Word（或保持PDF）
-        const pdfPath = file.replace(/\.(docx?|doc)$/, '_watermarked.pdf');
-        await convertWordToPDF(file, pdfPath, {
+        // Word文档转PDF并添加水印
+        const outputFilename = `${basename}_watermarked_${timestamp}.pdf`;
+        const outputPath = path.join(uploadsDir, outputFilename);
+        
+        await convertWordToPDF(file, outputPath, {
           addWatermark: true,
           watermarkText
         });
+        
         results.push({
           filename: path.basename(file),
           success: true,
-          outputPath: pdfPath
+          outputPath: `/uploads/${outputFilename}`
         });
         succeeded++;
       } else {

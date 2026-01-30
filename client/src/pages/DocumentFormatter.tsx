@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { trpc } from "@/lib/trpc";
 import { 
   FileText, ArrowLeft, Eye, FileImage, RefreshCw, Download, 
-  Droplets, Hash, Edit, Wand2 
+  Droplets, Hash, Edit, Wand2, CheckCircle2, XCircle 
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation } from "wouter";
@@ -649,12 +649,42 @@ export default function DocumentFormatter() {
                 </Button>
 
                 {watermarkResult && (
-                  <div className="mt-4">
+                  <div className="mt-4 space-y-4">
                     <Alert>
                       <AlertDescription>
                         ✅ 成功处理 {watermarkResult.succeeded} 个文件，失败 {watermarkResult.failed} 个
                       </AlertDescription>
                     </Alert>
+                    
+                    {/* 显示每个文件的下载链接 */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">处理结果：</h4>
+                      {watermarkResult.results.map((result, index) => (
+                        <div key={index} className="flex items-center justify-between p-2 border rounded">
+                          <div className="flex items-center gap-2">
+                            {result.success ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            )}
+                            <span className="text-sm">{result.filename}</span>
+                            {result.error && (
+                              <span className="text-xs text-red-500">({result.error})</span>
+                            )}
+                          </div>
+                          {result.success && result.outputPath && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(result.outputPath, '_blank')}
+                            >
+                              <Download className="mr-1 h-3 w-3" />
+                              下载
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </CardContent>
