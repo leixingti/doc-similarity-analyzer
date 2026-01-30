@@ -14,6 +14,7 @@ import ContractReview from "./pages/ContractReview";
 import DocumentFormatter from "./pages/DocumentFormatter";
 import DocumentGeneration from "./pages/DocumentGeneration";
 import DocumentManagement from "./pages/DocumentManagement";
+import EvidenceManagement from "./pages/EvidenceManagement";
 import Login from "./pages/Login";
 import ChangePassword from "./pages/ChangePassword";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/document-formatter" component={DocumentFormatter} />
       <Route path="/document-generation" component={DocumentGeneration} />
       <Route path="/document-management" component={DocumentManagement} />
+      <Route path="/evidence-management" component={EvidenceManagement} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
